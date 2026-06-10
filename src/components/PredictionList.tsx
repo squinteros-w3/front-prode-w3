@@ -4,6 +4,20 @@ import type { MatchView } from '../lib/types';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
+const STAGE_LABELS: Record<string, string> = {
+  r32: '32avos',
+  r16: 'Octavos',
+  qf: 'Cuartos',
+  sf: 'Semifinal',
+  third: '3er puesto',
+  final: 'Final',
+};
+
+function stageLabel(match: { group: string | null; stage: string }): string {
+  if (match.group) return `Grupo ${match.group}`;
+  return STAGE_LABELS[match.stage] ?? match.stage;
+}
+
 function TeamLabel({
   name,
   code,
@@ -39,17 +53,36 @@ function TeamLabel({
 }
 
 function MatchCard({ match }: { match: MatchView }) {
-  const [home, setHome] = useState(
-    match.prediction ? String(match.prediction.homeScore) : '',
-  );
-  const [away, setAway] = useState(
-    match.prediction ? String(match.prediction.awayScore) : '',
-  );
+  const initialHome = match.prediction ? String(match.prediction.homeScore) : '';
+  const initialAway = match.prediction ? String(match.prediction.awayScore) : '';
+
+  const [home, setHome] = useState(initialHome);
+  const [away, setAway] = useState(initialAway);
+  // Lo que está realmente guardado en el servidor (para detectar cambios).
+  const [savedHome, setSavedHome] = useState(initialHome);
+  const [savedAway, setSavedAway] = useState(initialAway);
   const [state, setState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
 
   const editable = !match.locked && match.status === 'SCHEDULED';
   const finished = match.status === 'FINISHED';
+
+  const hasSaved = savedHome !== '' && savedAway !== '';
+  const bothFilled = home !== '' && away !== '';
+  const changed = home !== savedHome || away !== savedAway;
+  const dirty = editable && bothFilled && changed;
+  // El botón aparece solo cuando hay algo para guardar (o mientras da feedback).
+  const showButton =
+    editable && (dirty || state === 'saving' || state === 'saved' || state === 'error');
+
+  function handleHome(v: string) {
+    setHome(v);
+    if (state !== 'idle') setState('idle');
+  }
+  function handleAway(v: string) {
+    setAway(v);
+    if (state !== 'idle') setState('idle');
+  }
 
   async function save() {
     const h = Number(home);
@@ -71,8 +104,9 @@ function MatchCard({ match }: { match: MatchView }) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message ?? 'No se pudo guardar');
       }
+      setSavedHome(home);
+      setSavedAway(away);
       setState('saved');
-      setTimeout(() => setState('idle'), 1500);
     } catch (e) {
       setError((e as Error).message);
       setState('error');
@@ -84,7 +118,12 @@ function MatchCard({ match }: { match: MatchView }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-colors hover:border-white/20 sm:p-4">
       <div className="mb-2 flex items-center justify-between text-xs text-white/50">
-        <span>{formatKickoff(match.kickoffAt)} hs</span>
+        <span className="flex items-center gap-2">
+          <span className="rounded-full bg-white/5 px-2 py-0.5 font-medium text-white/70">
+            {stageLabel(match)}
+          </span>
+          <span>{formatKickoff(match.kickoffAt)} hs</span>
+        </span>
         {finished ? (
           <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-white/60">
             Finalizado
@@ -111,14 +150,14 @@ function MatchCard({ match }: { match: MatchView }) {
         <div className="flex items-center justify-center gap-2 sm:gap-3">
           <ScoreBox
             value={home}
-            onChange={setHome}
+            onChange={handleHome}
             editable={editable}
             placeholder="-"
           />
           <span className="text-xl font-bold text-white/30">:</span>
           <ScoreBox
             value={away}
-            onChange={setAway}
+            onChange={handleAway}
             editable={editable}
             placeholder="-"
           />
@@ -152,23 +191,36 @@ function MatchCard({ match }: { match: MatchView }) {
       )}
 
       {editable && (
-        <div className="mt-3 flex items-center justify-end gap-3">
+        <div className="mt-3 flex min-h-[34px] items-center justify-end gap-3">
           {error && state === 'error' && (
             <span className="text-xs text-red-400">{error}</span>
           )}
-          <button
-            onClick={save}
-            disabled={state === 'saving'}
-            className="rounded-lg bg-w3-primary px-4 py-1.5 text-sm font-semibold text-w3-black transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {state === 'saving'
-              ? 'Guardando…'
-              : state === 'saved'
-                ? '✓ Guardado'
-                : match.prediction
+
+          {state === 'saved' && !dirty ? (
+            <span className="text-sm font-medium text-w3-primary">
+              ✓ Guardado
+            </span>
+          ) : !showButton && hasSaved ? (
+            <span className="text-xs text-white/40">
+              Predicción guardada · editá para cambiarla
+            </span>
+          ) : showButton ? (
+            <button
+              onClick={save}
+              disabled={state === 'saving'}
+              className="rounded-lg bg-w3-primary px-4 py-1.5 text-sm font-semibold text-w3-black transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {state === 'saving'
+                ? 'Guardando…'
+                : hasSaved
                   ? 'Actualizar'
                   : 'Guardar'}
-          </button>
+            </button>
+          ) : (
+            <span className="text-xs text-white/40">
+              Cargá tu predicción
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -202,7 +254,7 @@ function ScoreBox({
       value={value}
       onChange={(e) => onChange(e.target.value.slice(0, 2))}
       placeholder={placeholder}
-      className="h-14 w-14 rounded-xl border border-white/15 bg-w3-black text-center text-2xl font-bold tabular-nums outline-none transition-colors focus:border-w3-primary focus:ring-2 focus:ring-w3-primary/40 sm:h-16 sm:w-16"
+      className="h-14 w-14 rounded-xl border border-white/15 bg-w3-black text-center text-2xl font-bold tabular-nums outline-none transition-colors [appearance:textfield] focus:border-w3-primary focus:ring-2 focus:ring-w3-primary/40 sm:h-16 sm:w-16 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     />
   );
 }
