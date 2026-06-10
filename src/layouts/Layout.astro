@@ -1,0 +1,36 @@
+---
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+
+interface Props {
+  title?: string;
+  active?: 'partidos' | 'leaderboard' | 'perfil' | 'admin';
+  bare?: boolean;
+}
+
+const { title = 'Prode W3', active, bare = false } = Astro.props;
+const user = Astro.locals.user;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Prode del Mundial 2026 — W3 IT Solutions" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-dvh bg-w3-black text-w3-white antialiased">
+    {!bare && user && <Nav user={user} active={active} />}
+    <main class="mx-auto w-full max-w-5xl px-4 pb-20 pt-6 sm:px-6">
+      <slot />
+    </main>
+  </body>
+</html>

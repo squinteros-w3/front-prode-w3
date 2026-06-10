@@ -1,0 +1,101 @@
+---
+import AvatarEditor from '../components/AvatarEditor.tsx';
+import Layout from '../layouts/Layout.astro';
+import { getStats } from '../lib/api';
+
+export const prerender = false;
+
+const user = Astro.locals.user!;
+const stats = await getStats(Astro.locals.token);
+
+const cards = stats
+  ? [
+      { label: 'Puntos', value: stats.totalPoints, accent: true },
+      {
+        label: 'Posición',
+        value: stats.rank ? `${stats.rank}º` : '—',
+        sub: stats.totalPlayers ? `de ${stats.totalPlayers}` : undefined,
+      },
+      { label: 'Exactos', value: stats.exactCount },
+      { label: 'Mejor racha', value: stats.bestStreak },
+    ]
+  : [];
+---
+
+<Layout title="Perfil — Prode W3" active="perfil">
+  <div class="mb-8 flex flex-col items-center text-center">
+    <AvatarEditor client:load name={user.name} avatarUrl={user.avatarUrl} />
+    <h1 class="mt-4 text-xl font-extrabold">{user.name}</h1>
+    <p class="text-sm text-white/40">{user.email}</p>
+    {
+      user.role === 'ADMIN' && (
+        <span class="mt-2 rounded-full bg-w3-primary/15 px-3 py-0.5 text-xs font-medium text-w3-primary">
+          Administrador
+        </span>
+      )
+    }
+  </div>
+
+  <div class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    {
+      cards.map((c) => (
+        <div
+          class:list={[
+            'rounded-xl border p-4 text-center',
+            c.accent
+              ? 'border-w3-primary/30 bg-w3-primary/10'
+              : 'border-white/10 bg-white/[0.03]',
+          ]}
+        >
+          <div
+            class:list={[
+              'text-3xl font-extrabold',
+              c.accent ? 'text-w3-primary' : 'text-w3-white',
+            ]}
+          >
+            {c.value}
+          </div>
+          <div class="mt-1 text-xs uppercase tracking-wide text-white/40">
+            {c.label}
+          </div>
+          {c.sub && <div class="text-[10px] text-white/30">{c.sub}</div>}
+        </div>
+      ))
+    }
+  </div>
+
+  {
+    stats && (
+      <section>
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-white/50">
+          Medallas
+        </h2>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {stats.medals.map((m) => (
+            <div
+              class:list={[
+                'flex items-center gap-3 rounded-xl border p-3 transition-opacity',
+                m.earned
+                  ? 'border-w3-primary/30 bg-w3-primary/5'
+                  : 'border-white/10 bg-white/[0.02] opacity-40',
+              ]}
+            >
+              <span
+                class:list={[
+                  'grid h-10 w-10 shrink-0 place-items-center rounded-lg text-lg',
+                  m.earned ? 'bg-w3-primary text-w3-black' : 'bg-white/10',
+                ]}
+              >
+                {m.earned ? '★' : '☆'}
+              </span>
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold">{m.label}</p>
+                <p class="truncate text-xs text-white/40">{m.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+  }
+</Layout>

@@ -1,0 +1,80 @@
+---
+import type { AppUser } from '../lib/types';
+
+interface Props {
+  user: AppUser;
+  active?: 'partidos' | 'leaderboard' | 'perfil' | 'admin';
+}
+
+const { user, active } = Astro.props;
+
+const links: { href: string; label: string; key: Props['active'] }[] = [
+  { href: '/partidos', label: 'Partidos', key: 'partidos' },
+  { href: '/leaderboard', label: 'Tabla', key: 'leaderboard' },
+  { href: '/perfil', label: 'Perfil', key: 'perfil' },
+];
+if (user.role === 'ADMIN') {
+  links.push({ href: '/admin', label: 'Admin', key: 'admin' });
+}
+
+const initials = user.name
+  .split(' ')
+  .map((p) => p[0])
+  .slice(0, 2)
+  .join('')
+  .toUpperCase();
+---
+
+<header
+  class="sticky top-0 z-40 border-b border-white/10 bg-w3-black/80 backdrop-blur-md"
+>
+  <nav class="mx-auto flex h-16 w-full max-w-5xl items-center gap-4 px-4 sm:px-6">
+    <a href="/partidos" class="flex items-center gap-2 font-extrabold tracking-tight">
+      <span
+        class="grid h-8 w-8 place-items-center rounded-lg bg-w3-primary text-w3-black"
+        >W3</span
+      >
+      <span class="hidden sm:inline">Prode <span class="text-w3-primary">2026</span></span>
+    </a>
+
+    <div class="ml-auto flex items-center gap-1 sm:gap-2">
+      {
+        links.map((l) => (
+          <a
+            href={l.href}
+            class:list={[
+              'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              active === l.key
+                ? 'bg-w3-primary/15 text-w3-primary'
+                : 'text-white/70 hover:bg-white/5 hover:text-white',
+            ]}
+          >
+            {l.label}
+          </a>
+        ))
+      }
+    </div>
+
+    <div class="flex items-center gap-3 pl-1">
+      {
+        user.avatarUrl ? (
+          <img
+            src={user.avatarUrl}
+            alt={user.name}
+            class="h-9 w-9 rounded-full border border-white/15 object-cover"
+          />
+        ) : (
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xs font-semibold">
+            {initials}
+          </span>
+        )
+      }
+      <a
+        href="/api/auth/logout"
+        title="Cerrar sesión"
+        class="hidden text-sm text-white/50 transition-colors hover:text-white sm:inline"
+        >Salir</a
+      >
+    </div>
+  </nav>
+</header>

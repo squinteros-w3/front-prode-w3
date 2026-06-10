@@ -1,0 +1,29 @@
+---
+import PredictionList from '../components/PredictionList.tsx';
+import Layout from '../layouts/Layout.astro';
+import { getMatches } from '../lib/api';
+
+export const prerender = false;
+
+const matches = await getMatches(Astro.locals.token);
+const open = matches.filter((m) => !m.locked).length;
+---
+
+<Layout title="Partidos — Prode W3" active="partidos">
+  <div class="mb-6 flex items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Partidos</h1>
+      <p class="mt-1 text-sm text-white/50">
+        Cargá tu predicción hasta 1 hora antes de cada partido · horario argentino
+      </p>
+    </div>
+    <span
+      class="shrink-0 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm"
+    >
+      <span class="font-bold text-w3-primary">{open}</span>
+      <span class="text-white/50"> abiertos</span>
+    </span>
+  </div>
+
+  <PredictionList client:load matches={matches} />
+</Layout>

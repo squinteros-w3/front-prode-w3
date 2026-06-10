@@ -1,0 +1,24 @@
+---
+import AdminPanel from '../../components/AdminPanel.tsx';
+import Layout from '../../layouts/Layout.astro';
+import { getAdminUsers, getMatches } from '../../lib/api';
+
+export const prerender = false;
+
+const token = Astro.locals.token;
+const [matches, users] = await Promise.all([
+  getMatches(token),
+  getAdminUsers(token),
+]);
+---
+
+<Layout title="Admin — Prode W3" active="admin">
+  <h1 class="mb-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
+    Panel de administración
+  </h1>
+  <p class="mb-6 text-sm text-white/50">
+    Sincronización, carga manual de resultados y gestión de usuarios.
+  </p>
+
+  <AdminPanel client:load matches={matches} users={users} />
+</Layout>

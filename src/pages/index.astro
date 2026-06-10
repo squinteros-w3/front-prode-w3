@@ -1,0 +1,63 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+export const prerender = false;
+
+if (Astro.locals.user) {
+  return Astro.redirect('/partidos');
+}
+
+const backend =
+  import.meta.env.PUBLIC_BACKEND_API_URL ?? 'http://localhost:3000/api';
+const error = Astro.url.searchParams.get('error');
+---
+
+<Layout title="Prode W3 — Mundial 2026" bare>
+  <div class="bg-w3-grid -mt-6 min-h-dvh">
+    <div
+      class="mx-auto flex min-h-dvh max-w-2xl flex-col items-center justify-center px-4 text-center"
+    >
+      <span
+        class="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/60"
+      >
+        <span class="h-2 w-2 rounded-full bg-w3-primary"></span>
+        W3 IT Solutions · Mundial 2026
+      </span>
+
+      <h1 class="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
+        El <span class="text-w3-primary">Prode</span> interno<br />de la empresa
+      </h1>
+
+      <p class="mt-5 max-w-md text-balance text-white/60">
+        Predecí los resultados, sumá puntos y peleá la punta de la tabla.
+        Resultado exacto suma <strong class="text-w3-white">3</strong>, acertar
+        el ganador suma <strong class="text-w3-white">1</strong>.
+      </p>
+
+      {
+        error && (
+          <p class="mt-4 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">
+            No pudimos iniciar sesión. Usá tu cuenta @w3itsolutions.net.
+          </p>
+        )
+      }
+
+      <a
+        href={`${backend}/auth/google`}
+        class="mt-8 inline-flex items-center gap-3 rounded-xl bg-w3-primary px-6 py-3.5 font-semibold text-w3-black shadow-lg shadow-w3-primary/20 transition-transform hover:scale-[1.02]"
+      >
+        <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M12.24 10.4v3.36h4.78c-.2 1.13-1.45 3.3-4.78 3.3-2.88 0-5.23-2.38-5.23-5.32S9.36 6.42 12.24 6.42c1.64 0 2.74.7 3.37 1.3l2.3-2.22C16.44 4.15 14.55 3.3 12.24 3.3 7.7 3.3 4 7 4 11.74s3.7 8.44 8.24 8.44c4.76 0 7.9-3.34 7.9-8.05 0-.54-.06-.95-.13-1.36z"
+          ></path>
+        </svg>
+        Iniciar sesión con Google
+      </a>
+
+      <p class="mt-4 text-xs text-white/40">
+        Solo cuentas <span class="text-white/60">@w3itsolutions.net</span>
+      </p>
+    </div>
+  </div>
+</Layout>

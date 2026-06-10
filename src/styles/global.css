@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-w3-black: #060606;
+  --color-w3-white: #fafafa;
+  --color-w3-primary: #4bc083;
+  --color-w3-primary-dark: #2f9c66;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-w3-black);
+    color: var(--color-w3-white);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background-color: var(--color-w3-primary);
+    color: var(--color-w3-black);
+  }
+}
+
+/* Sutil grano/relieve para la marca */
+@layer utilities {
+  .bg-w3-grid {
+    background-image:
+      radial-gradient(
+        circle at 1px 1px,
+        color-mix(in srgb, var(--color-w3-primary) 14%, transparent) 1px,
+        transparent 0
+      );
+    background-size: 28px 28px;
+  }
+}
