@@ -4,7 +4,14 @@ import Nav from '../components/Nav.astro';
 
 interface Props {
   title?: string;
-  active?: 'partidos' | 'grupos' | 'leaderboard' | 'puntos' | 'perfil' | 'admin';
+  active?:
+    | 'partidos'
+    | 'grupos'
+    | 'eliminatoria'
+    | 'leaderboard'
+    | 'puntos'
+    | 'perfil'
+    | 'admin';
   bare?: boolean;
 }
 

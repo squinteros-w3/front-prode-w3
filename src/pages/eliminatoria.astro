@@ -1,0 +1,117 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TeamRow from '../components/TeamRow.astro';
+import { getMatches } from '../lib/api';
+import { formatKickoff } from '../lib/format';
+import type { MatchView } from '../lib/types';
+
+export const prerender = false;
+
+const STAGE_ORDER = ['r32', 'r16', 'qf', 'sf', 'third', 'final'];
+const STAGE_LABELS: Record<string, string> = {
+  r32: '32avos de final',
+  r16: 'Octavos de final',
+  qf: 'Cuartos de final',
+  sf: 'Semifinales',
+  third: 'Tercer puesto',
+  final: 'Final',
+};
+
+const all = await getMatches(Astro.locals.token);
+const knockout = all.filter((m) => m.stage !== 'group');
+
+const byStage = STAGE_ORDER.map((stage) => ({
+  stage,
+  label: STAGE_LABELS[stage] ?? stage,
+  matches: knockout
+    .filter((m) => m.stage === stage)
+    .sort(
+      (a, b) =>
+        new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime(),
+    ),
+})).filter((s) => s.matches.length > 0);
+
+function winner(m: MatchView): 'home' | 'away' | null {
+  if (m.status !== 'FINISHED' || m.homeScore === null || m.awayScore === null)
+    return null;
+  if (m.homeScore > m.awayScore) return 'home';
+  if (m.awayScore > m.homeScore) return 'away';
+  return null; // empate (definición por penales no la trae la API base)
+}
+---
+
+<Layout title="Eliminatoria — Prode W3" active="eliminatoria">
+  <div class="mb-6">
+    <h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">
+      Fase eliminatoria
+    </h1>
+    <p class="mt-1 text-sm text-white/50">
+      Las llaves se completan automáticamente a medida que avanza el Mundial.
+    </p>
+  </div>
+
+  {
+    byStage.length === 0 ? (
+      <div class="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
+        <p class="text-4xl">🏆</p>
+        <p class="mt-3 font-semibold">La eliminatoria todavía no arrancó</p>
+        <p class="mx-auto mt-1 max-w-sm text-sm text-white/50">
+          Cuando terminen los grupos y se definan los cruces, vas a ver acá las
+          llaves con sus resultados.
+        </p>
+      </div>
+    ) : (
+      <div class="space-y-8">
+        {byStage.map((s) => (
+          <section>
+            <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-w3-primary">
+              {s.label}
+              <span class="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/40">
+                {s.matches.length}
+              </span>
+            </h2>
+            <div class="grid gap-3 sm:grid-cols-2">
+              {s.matches.map((m) => {
+                const win = winner(m);
+                const finished = m.status === 'FINISHED';
+                return (
+                  <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <div class="mb-2 flex items-center justify-between text-xs text-white/40">
+                      <span>{formatKickoff(m.kickoffAt)} hs</span>
+                      <span
+                        class:list={[
+                          'rounded-full px-2 py-0.5 font-medium',
+                          finished
+                            ? 'bg-white/10 text-white/60'
+                            : 'bg-w3-primary/15 text-w3-primary',
+                        ]}
+                      >
+                        {finished ? 'Finalizado' : 'Por jugarse'}
+                      </span>
+                    </div>
+
+                    <TeamRow
+                      name={m.homeTeam.name}
+                      flagUrl={m.homeTeam.flagUrl}
+                      score={m.homeScore}
+                      finished={finished}
+                      isWinner={win === 'home'}
+                    />
+                    <div class="my-1 h-px bg-white/5" />
+                    <TeamRow
+                      name={m.awayTeam.name}
+                      flagUrl={m.awayTeam.flagUrl}
+                      score={m.awayScore}
+                      finished={finished}
+                      isWinner={win === 'away'}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    )
+  }
+</Layout>

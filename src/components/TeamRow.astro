@@ -1,0 +1,40 @@
+---
+interface Props {
+  name: string;
+  flagUrl: string | null;
+  score: number | null;
+  finished: boolean;
+  isWinner: boolean;
+}
+const { name, flagUrl, score, finished, isWinner } = Astro.props;
+---
+
+<div class="flex items-center gap-2.5">
+  {
+    flagUrl ? (
+      <img
+        src={flagUrl}
+        alt=""
+        class="h-5 w-7 shrink-0 rounded-sm object-cover ring-1 ring-white/10"
+      />
+    ) : (
+      <span class="h-5 w-7 shrink-0 rounded-sm bg-white/10" />
+    )
+  }
+  <span
+    class:list={[
+      'min-w-0 flex-1 truncate text-sm',
+      isWinner ? 'font-bold text-w3-primary' : 'font-medium text-white/90',
+    ]}
+  >
+    {name}
+  </span>
+  <span
+    class:list={[
+      'grid h-8 w-8 shrink-0 place-items-center rounded-lg text-base font-bold tabular-nums',
+      isWinner ? 'bg-w3-primary text-w3-black' : 'bg-white/5 text-white/70',
+    ]}
+  >
+    {finished && score !== null ? score : '–'}
+  </span>
+</div>
