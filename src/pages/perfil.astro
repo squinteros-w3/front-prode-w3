@@ -67,9 +67,14 @@ const cards = stats
   {
     stats && (
       <section>
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-white/50">
-          Medallas
-        </h2>
+        <div class="mb-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-white/50">
+            Medallas
+          </h2>
+          <p class="mt-0.5 text-xs text-white/40">
+            Son logros y no suman puntos — el puntaje sale solo de tus predicciones.
+          </p>
+        </div>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {stats.medals.map((m) => (
             <div
