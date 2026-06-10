@@ -68,6 +68,23 @@ export interface UserStats {
   medals: Medal[];
 }
 
+export interface StandingRow {
+  team: { id: string; name: string; code: string | null; flagUrl: string | null };
+  mp: number;
+  w: number;
+  d: number;
+  l: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  pts: number;
+}
+
+export interface GroupStanding {
+  group: string;
+  standings: StandingRow[];
+}
+
 export interface AdminUser {
   id: string;
   email: string;

@@ -1,6 +1,7 @@
 import type {
   AdminUser,
   AppUser,
+  GroupStanding,
   LeaderboardEntry,
   MatchView,
   UserStats,
@@ -49,6 +50,9 @@ export const getMatches = (token: string | null) =>
 
 export const getLeaderboard = (token: string | null) =>
   getJson<LeaderboardEntry[]>('/leaderboard', token).then((r) => r ?? []);
+
+export const getGroups = (token: string | null) =>
+  getJson<GroupStanding[]>('/groups/standings', token).then((r) => r ?? []);
 
 export const getStats = (token: string | null) =>
   getJson<UserStats>('/stats/me', token);

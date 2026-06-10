@@ -3,13 +3,14 @@ import type { AppUser } from '../lib/types';
 
 interface Props {
   user: AppUser;
-  active?: 'partidos' | 'leaderboard' | 'puntos' | 'perfil' | 'admin';
+  active?: 'partidos' | 'grupos' | 'leaderboard' | 'puntos' | 'perfil' | 'admin';
 }
 
 const { user, active } = Astro.props;
 
 const links: { href: string; label: string; key: Props['active'] }[] = [
   { href: '/partidos', label: 'Partidos', key: 'partidos' },
+  { href: '/grupos', label: 'Grupos', key: 'grupos' },
   { href: '/leaderboard', label: 'Tabla', key: 'leaderboard' },
   { href: '/puntajes', label: 'Puntos', key: 'puntos' },
   { href: '/perfil', label: 'Perfil', key: 'perfil' },
