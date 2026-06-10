@@ -108,14 +108,14 @@ function MatchCard({ match }: { match: MatchView }) {
           align="left"
         />
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-center gap-2 sm:gap-3">
           <ScoreBox
             value={home}
             onChange={setHome}
             editable={editable}
             placeholder="-"
           />
-          <span className="text-white/30">:</span>
+          <span className="text-xl font-bold text-white/30">:</span>
           <ScoreBox
             value={away}
             onChange={setAway}
@@ -188,7 +188,7 @@ function ScoreBox({
 }) {
   if (!editable) {
     return (
-      <span className="grid h-10 w-10 place-items-center rounded-lg bg-white/5 text-lg font-bold tabular-nums">
+      <span className="grid h-14 w-14 place-items-center rounded-xl bg-white/5 text-2xl font-bold tabular-nums sm:h-16 sm:w-16">
         {value === '' ? placeholder : value}
       </span>
     );
@@ -202,7 +202,7 @@ function ScoreBox({
       value={value}
       onChange={(e) => onChange(e.target.value.slice(0, 2))}
       placeholder={placeholder}
-      className="h-10 w-10 rounded-lg border border-white/15 bg-w3-black text-center text-lg font-bold tabular-nums outline-none focus:border-w3-primary focus:ring-1 focus:ring-w3-primary"
+      className="h-14 w-14 rounded-xl border border-white/15 bg-w3-black text-center text-2xl font-bold tabular-nums outline-none transition-colors focus:border-w3-primary focus:ring-2 focus:ring-w3-primary/40 sm:h-16 sm:w-16"
     />
   );
 }

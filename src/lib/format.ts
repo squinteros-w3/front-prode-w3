@@ -7,12 +7,14 @@ const dateTimeFmt = new Intl.DateTimeFormat('es-AR', {
   month: 'short',
   hour: '2-digit',
   minute: '2-digit',
+  hourCycle: 'h23',
 });
 
 const timeFmt = new Intl.DateTimeFormat('es-AR', {
   timeZone: AR_TZ,
   hour: '2-digit',
   minute: '2-digit',
+  hourCycle: 'h23',
 });
 
 const dayFmt = new Intl.DateTimeFormat('es-AR', {

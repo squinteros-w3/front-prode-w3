@@ -1,0 +1,149 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Scoreline from '../components/Scoreline.astro';
+
+export const prerender = false;
+
+type Tone = 'exact' | 'outcome' | 'miss';
+
+const rules: {
+  points: number;
+  title: string;
+  desc: string;
+  pred: [number, number];
+  real: [number, number];
+  tone: Tone;
+}[] = [
+  {
+    points: 3,
+    title: 'Resultado exacto',
+    desc: 'Le pegás al marcador justo de los dos equipos.',
+    pred: [2, 1],
+    real: [2, 1],
+    tone: 'exact',
+  },
+  {
+    points: 1,
+    title: 'Acertás el ganador (o el empate)',
+    desc: 'Acertás quién gana o que empatan, pero no el marcador exacto.',
+    pred: [2, 0],
+    real: [3, 1],
+    tone: 'outcome',
+  },
+  {
+    points: 0,
+    title: 'No acertaste',
+    desc: 'El resultado terminó distinto a tu predicción.',
+    pred: [1, 2],
+    real: [2, 1],
+    tone: 'miss',
+  },
+];
+
+const toneStyles: Record<
+  Tone,
+  { card: string; badge: string; ring: string }
+> = {
+  exact: {
+    card: 'border-w3-primary/40 bg-w3-primary/[0.07]',
+    badge: 'bg-w3-primary text-w3-black',
+    ring: 'ring-w3-primary/40',
+  },
+  outcome: {
+    card: 'border-w3-primary/20 bg-white/[0.03]',
+    badge: 'bg-w3-primary/20 text-w3-primary',
+    ring: 'ring-white/10',
+  },
+  miss: {
+    card: 'border-white/10 bg-white/[0.02]',
+    badge: 'bg-white/10 text-white/50',
+    ring: 'ring-white/10',
+  },
+};
+---
+
+<Layout title="Puntos — Prode W3" active="puntos">
+  <div class="mb-8 text-center sm:mb-10">
+    <h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">
+      ¿Cómo se suman los puntos?
+    </h1>
+    <p class="mx-auto mt-2 max-w-md text-sm text-white/50">
+      Cargás tu marcador antes de cada partido. Cuando termina, sumás según
+      cuánto le acertaste.
+    </p>
+  </div>
+
+  <div class="space-y-4">
+    {
+      rules.map((r) => {
+        const s = toneStyles[r.tone];
+        return (
+          <div
+            class:list={[
+              'flex flex-col items-center gap-5 rounded-2xl border p-5 sm:flex-row sm:gap-6 sm:p-6',
+              s.card,
+            ]}
+          >
+            <div class="flex shrink-0 flex-col items-center">
+              <span
+                class:list={[
+                  'grid h-20 w-20 place-items-center rounded-2xl text-3xl font-extrabold tabular-nums',
+                  s.badge,
+                ]}
+              >
+                +{r.points}
+              </span>
+              <span class="mt-1.5 text-[11px] uppercase tracking-wide text-white/40">
+                {r.points === 1 ? 'punto' : 'puntos'}
+              </span>
+            </div>
+
+            <div class="min-w-0 flex-1 text-center sm:text-left">
+              <h2 class="text-lg font-bold">{r.title}</h2>
+              <p class="mt-0.5 text-sm text-white/50">{r.desc}</p>
+            </div>
+
+            <div
+              class:list={[
+                'flex shrink-0 gap-3 rounded-xl bg-w3-black/40 p-3 ring-1',
+                s.ring,
+              ]}
+            >
+              <div class="text-center">
+                <p class="mb-1 text-[10px] uppercase tracking-wide text-white/40">
+                  Tu predicción
+                </p>
+                <Scoreline a={r.pred[0]} b={r.pred[1]} />
+              </div>
+              <div class="w-px self-stretch bg-white/10" />
+              <div class="text-center">
+                <p class="mb-1 text-[10px] uppercase tracking-wide text-white/40">
+                  Resultado
+                </p>
+                <Scoreline a={r.real[0]} b={r.real[1]} />
+              </div>
+            </div>
+          </div>
+        );
+      })
+    }
+  </div>
+
+  <div class="mt-8 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <p class="text-sm font-semibold text-w3-primary">Desempate</p>
+      <p class="mt-1 text-sm text-white/55">
+        Si dos personas tienen los mismos puntos, queda arriba quien tenga más
+        <strong class="text-white/80"> resultados exactos</strong>.
+      </p>
+    </div>
+    <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <p class="text-sm font-semibold text-w3-primary">Cierre de predicción</p>
+      <p class="mt-1 text-sm text-white/55">
+        Cada partido se cierra
+        <strong class="text-white/80"> 1 hora antes</strong> del inicio (horario
+        argentino). Después no se puede editar.
+      </p>
+    </div>
+  </div>
+</Layout>
