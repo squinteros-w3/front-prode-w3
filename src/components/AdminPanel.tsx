@@ -129,9 +129,19 @@ function ResultRow({ match }: { match: MatchView }) {
   const [away, setAway] = useState(
     match.awayScore !== null ? String(match.awayScore) : '',
   );
+  const [penHome, setPenHome] = useState(
+    match.homePenalties !== null ? String(match.homePenalties) : '',
+  );
+  const [penAway, setPenAway] = useState(
+    match.awayPenalties !== null ? String(match.awayPenalties) : '',
+  );
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     'idle',
   );
+
+  const isKnockout = match.stage !== 'group';
+  // Mostrar penales solo en eliminación y cuando el resultado cargado es empate.
+  const showPens = isKnockout && home !== '' && away !== '' && home === away;
 
   async function save() {
     const h = Number(home);
@@ -140,12 +150,17 @@ function ResultRow({ match }: { match: MatchView }) {
       setState('error');
       return;
     }
+    const body: Record<string, number> = { homeScore: h, awayScore: a };
+    if (showPens && penHome !== '' && penAway !== '') {
+      body.homePenalties = Number(penHome);
+      body.awayPenalties = Number(penAway);
+    }
     setState('saving');
     try {
       const res = await fetch(`/api/admin/matches/${match.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ homeScore: h, awayScore: a }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
       setState('saved');
@@ -156,50 +171,77 @@ function ResultRow({ match }: { match: MatchView }) {
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">
-          {match.homeTeam.name} vs {match.awayTeam.name}
-        </p>
-        <p className="text-xs text-white/40">
-          {formatKickoff(match.kickoffAt)} ·{' '}
-          {match.status === 'FINISHED' ? 'Finalizado' : 'Programado'}
-        </p>
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">
+            {match.homeTeam.name} vs {match.awayTeam.name}
+          </p>
+          <p className="text-xs text-white/40">
+            {formatKickoff(match.kickoffAt)} ·{' '}
+            {match.status === 'FINISHED' ? 'Finalizado' : 'Programado'}
+            {isKnockout ? ' · Eliminación' : ''}
+          </p>
+        </div>
+        <input
+          type="number"
+          min={0}
+          value={home}
+          onChange={(e) => setHome(e.target.value.slice(0, 2))}
+          className="h-9 w-12 rounded-lg border border-white/15 bg-w3-black text-center font-bold outline-none focus:border-w3-primary"
+        />
+        <span className="text-white/30">:</span>
+        <input
+          type="number"
+          min={0}
+          value={away}
+          onChange={(e) => setAway(e.target.value.slice(0, 2))}
+          className="h-9 w-12 rounded-lg border border-white/15 bg-w3-black text-center font-bold outline-none focus:border-w3-primary"
+        />
+        <button
+          onClick={save}
+          disabled={state === 'saving'}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+            state === 'saved'
+              ? 'bg-w3-primary/20 text-w3-primary'
+              : state === 'error'
+                ? 'bg-red-500/20 text-red-400'
+                : 'bg-w3-primary text-w3-black'
+          }`}
+        >
+          {state === 'saving'
+            ? '…'
+            : state === 'saved'
+              ? '✓'
+              : state === 'error'
+                ? 'Error'
+                : 'Guardar'}
+        </button>
       </div>
-      <input
-        type="number"
-        min={0}
-        value={home}
-        onChange={(e) => setHome(e.target.value.slice(0, 2))}
-        className="h-9 w-12 rounded-lg border border-white/15 bg-w3-black text-center font-bold outline-none focus:border-w3-primary"
-      />
-      <span className="text-white/30">:</span>
-      <input
-        type="number"
-        min={0}
-        value={away}
-        onChange={(e) => setAway(e.target.value.slice(0, 2))}
-        className="h-9 w-12 rounded-lg border border-white/15 bg-w3-black text-center font-bold outline-none focus:border-w3-primary"
-      />
-      <button
-        onClick={save}
-        disabled={state === 'saving'}
-        className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-          state === 'saved'
-            ? 'bg-w3-primary/20 text-w3-primary'
-            : state === 'error'
-              ? 'bg-red-500/20 text-red-400'
-              : 'bg-w3-primary text-w3-black'
-        }`}
-      >
-        {state === 'saving'
-          ? '…'
-          : state === 'saved'
-            ? '✓'
-            : state === 'error'
-              ? 'Error'
-              : 'Guardar'}
-      </button>
+
+      {showPens && (
+        <div className="mt-2 flex items-center gap-2 border-t border-white/5 pt-2 text-xs text-white/50">
+          <span className="flex-1">Empate → penales</span>
+          <input
+            type="number"
+            min={0}
+            value={penHome}
+            onChange={(e) => setPenHome(e.target.value.slice(0, 2))}
+            placeholder="0"
+            className="h-8 w-11 rounded-lg border border-white/15 bg-w3-black text-center font-bold text-w3-white outline-none focus:border-w3-primary"
+          />
+          <span className="text-white/30">:</span>
+          <input
+            type="number"
+            min={0}
+            value={penAway}
+            onChange={(e) => setPenAway(e.target.value.slice(0, 2))}
+            placeholder="0"
+            className="h-8 w-11 rounded-lg border border-white/15 bg-w3-black text-center font-bold text-w3-white outline-none focus:border-w3-primary"
+          />
+          <span className="w-[68px]" />
+        </div>
+      )}
     </div>
   );
 }

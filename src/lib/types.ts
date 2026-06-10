@@ -34,6 +34,8 @@ export interface MatchView {
   status: MatchStatus;
   homeScore: number | null;
   awayScore: number | null;
+  homePenalties: number | null;
+  awayPenalties: number | null;
   locksAt: string;
   locked: boolean;
   homeTeam: TeamLite;

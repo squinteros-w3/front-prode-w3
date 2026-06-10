@@ -36,7 +36,16 @@ function winner(m: MatchView): 'home' | 'away' | null {
     return null;
   if (m.homeScore > m.awayScore) return 'home';
   if (m.awayScore > m.homeScore) return 'away';
-  return null; // empate (definición por penales no la trae la API base)
+  // Empate en los 90'/prórroga: se define por penales (los carga el admin).
+  if (m.homePenalties !== null && m.awayPenalties !== null) {
+    if (m.homePenalties > m.awayPenalties) return 'home';
+    if (m.awayPenalties > m.homePenalties) return 'away';
+  }
+  return null;
+}
+
+function wentToPens(m: MatchView): boolean {
+  return m.homePenalties !== null && m.awayPenalties !== null;
 }
 ---
 
@@ -105,6 +114,18 @@ function winner(m: MatchView): 'home' | 'away' | null {
                       finished={finished}
                       isWinner={win === 'away'}
                     />
+
+                    {wentToPens(m) && (
+                      <div class="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-white/[0.04] py-1.5 text-xs text-white/60">
+                        <span aria-hidden="true">⚽</span>
+                        <span>
+                          Definido por penales{' '}
+                          <strong class="text-white/90">
+                            {m.homePenalties}–{m.awayPenalties}
+                          </strong>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
