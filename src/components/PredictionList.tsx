@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { dayKey, formatDay, formatKickoff } from '../lib/format';
 import type { MatchView } from '../lib/types';
 
