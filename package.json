@@ -1,5 +1,5 @@
 {
-  "name": "",
+  "name": "prode-w3-front",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs",
     "astro": "astro"
   },
   "dependencies": {
