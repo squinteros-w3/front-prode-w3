@@ -1,8 +1,100 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { dayKey, formatDay, formatKickoff } from '../lib/format';
 import type { MatchView } from '../lib/types';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+type MatchPhase = 'open' | 'upcoming' | 'live' | 'finished';
+
+interface PhaseInfo {
+  key: MatchPhase;
+  label: string;
+  hint: string;
+  chipClass: string;
+  dotClass: string;
+  pulse: boolean;
+}
+
+/**
+ * Deriva el estado "real" del partido combinando el status del backend
+ * (SCHEDULED/FINISHED) con el lock de predicciones y el horario de kickoff.
+ * `now` se pasa desde un reloj cliente para que "En vivo" aparezca solo.
+ */
+function getPhase(match: MatchView, now: number): PhaseInfo {
+  if (match.status === 'FINISHED') {
+    return {
+      key: 'finished',
+      label: 'Partido Finalizado',
+      hint: 'El partido terminó',
+      chipClass: 'bg-white/10 text-white/60',
+      dotClass: 'bg-white/40',
+      pulse: false,
+    };
+  }
+
+  const kickoff = new Date(match.kickoffAt).getTime();
+  if (match.locked && now >= kickoff) {
+    return {
+      key: 'live',
+      label: 'En Juego',
+      hint: 'Jugándose ahora',
+      chipClass: 'bg-red-500/15 text-red-400 ring-1 ring-red-500/30',
+      dotClass: 'bg-red-500',
+      pulse: true,
+    };
+  }
+
+  if (match.locked) {
+    return {
+      key: 'upcoming',
+      label: 'Por comenzar',
+      hint: 'Predicciones cerradas · el partido está por empezar',
+      chipClass: 'bg-amber-400/15 text-amber-300',
+      dotClass: 'bg-amber-400',
+      pulse: false,
+    };
+  }
+
+  return {
+    key: 'open',
+    label: 'Abierto',
+    hint: 'Podés cargar o editar tu predicción',
+    chipClass: 'bg-w3-primary/15 text-w3-primary',
+    dotClass: 'bg-w3-primary',
+    pulse: false,
+  };
+}
+
+function StatusChip({ phase }: { phase: PhaseInfo }) {
+  return (
+    <span
+      title={phase.hint}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-medium ${phase.chipClass}`}
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        {phase.pulse && (
+          <span
+            className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${phase.dotClass}`}
+          />
+        )}
+        <span
+          className={`relative inline-flex h-1.5 w-1.5 rounded-full ${phase.dotClass}`}
+        />
+      </span>
+      {phase.label}
+    </span>
+  );
+}
+
+/** Reloj cliente liviano: tick cada 30s, sin polling al servidor. */
+function useNow(intervalMs = 30_000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
 
 const STAGE_LABELS: Record<string, string> = {
   r32: '32avos',
@@ -52,7 +144,7 @@ function TeamLabel({
   );
 }
 
-function MatchCard({ match }: { match: MatchView }) {
+function MatchCard({ match, now }: { match: MatchView; now: number }) {
   const initialHome = match.prediction ? String(match.prediction.homeScore) : '';
   const initialAway = match.prediction ? String(match.prediction.awayScore) : '';
 
@@ -66,6 +158,7 @@ function MatchCard({ match }: { match: MatchView }) {
 
   const editable = !match.locked && match.status === 'SCHEDULED';
   const finished = match.status === 'FINISHED';
+  const phase = getPhase(match, now);
 
   const hasSaved = savedHome !== '' && savedAway !== '';
   const bothFilled = home !== '' && away !== '';
@@ -124,19 +217,7 @@ function MatchCard({ match }: { match: MatchView }) {
           </span>
           <span>{formatKickoff(match.kickoffAt)} hs</span>
         </span>
-        {finished ? (
-          <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-white/60">
-            Finalizado
-          </span>
-        ) : match.locked ? (
-          <span className="rounded-full bg-white/10 px-2 py-0.5 font-medium text-white/60">
-            Cerrado
-          </span>
-        ) : (
-          <span className="rounded-full bg-w3-primary/15 px-2 py-0.5 font-medium text-w3-primary">
-            Abierto
-          </span>
-        )}
+        <StatusChip phase={phase} />
       </div>
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
@@ -260,6 +341,7 @@ function ScoreBox({
 }
 
 export default function PredictionList({ matches }: { matches: MatchView[] }) {
+  const now = useNow();
   const groups = useMemo(() => {
     const map = new Map<string, MatchView[]>();
     for (const m of matches) {
@@ -288,7 +370,7 @@ export default function PredictionList({ matches }: { matches: MatchView[] }) {
           </h2>
           <div className="space-y-3">
             {dayMatches.map((m) => (
-              <MatchCard key={m.id} match={m} />
+              <MatchCard key={m.id} match={m} now={now} />
             ))}
           </div>
         </section>
