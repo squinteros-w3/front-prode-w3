@@ -338,7 +338,7 @@ export default function MatchCard({
           <span className="inline-flex items-center gap-1 rounded-full border border-w3-border bg-w3-surface-muted px-2 py-0.5 text-xs font-semibold text-w3-text-secondary sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[13px]">
             <Lock className="h-3 w-3 text-w3-text-muted" />
             <span className="sm:hidden">
-              Pronóstico {savedHome}–{savedAway}
+              Tu pronóstico {savedHome}–{savedAway}
             </span>
             <span className="hidden sm:inline">
               Tu pronóstico: {savedHome}–{savedAway}
