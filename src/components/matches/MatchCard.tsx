@@ -173,23 +173,11 @@ export default function MatchCard({
 
   const cardBg = finished ? 'bg-w3-surface-muted' : 'bg-w3-surface';
 
-  // Los casilleros muestran el marcador REAL: vacío (–) hasta que el partido
-  // termina. En edición usan el valor que estás cargando; en vivo o cerrado no
-  // hay marcador disponible, así que la predicción se ve solo en el footer.
-  const displayHome = finished
-    ? match.homeScore != null
-      ? String(match.homeScore)
-      : ''
-    : editable
-      ? home
-      : '';
-  const displayAway = finished
-    ? match.awayScore != null
-      ? String(match.awayScore)
-      : ''
-    : editable
-      ? away
-      : '';
+  // Los casilleros grandes muestran TU PREDICCIÓN. En edición usan el valor que
+  // estás cargando; en partidos finalizados o cerrados muestran el pronóstico
+  // guardado. El resultado real se ve solo en el footer.
+  const displayHome = editable ? home : savedHome;
+  const displayAway = editable ? away : savedAway;
 
   async function save() {
     const h = Number(home);
@@ -337,12 +325,8 @@ export default function MatchCard({
         {lockedWithPrediction && !finished && (
           <span className="inline-flex items-center gap-1 rounded-full border border-w3-border bg-w3-surface-muted px-2 py-0.5 text-xs font-semibold text-w3-text-secondary sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[13px]">
             <Lock className="h-3 w-3 text-w3-text-muted" />
-            <span className="sm:hidden">
-              Tu pronóstico {savedHome}–{savedAway}
-            </span>
-            <span className="hidden sm:inline">
-              Tu pronóstico: {savedHome}–{savedAway}
-            </span>
+            <span className="sm:hidden">Pronóstico cerrado</span>
+            <span className="hidden sm:inline">Tu pronóstico está cerrado</span>
           </span>
         )}
 
