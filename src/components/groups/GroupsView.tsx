@@ -40,10 +40,7 @@ export default function GroupsView({
   const hasPredictionsForSim = useMemo(() => {
     if (!selected) return false;
     return matches.some(
-      (m) =>
-        m.group === selected &&
-        m.status === 'SCHEDULED' &&
-        m.prediction != null,
+      (m) => m.group === selected && m.prediction != null,
     );
   }, [matches, selected]);
 

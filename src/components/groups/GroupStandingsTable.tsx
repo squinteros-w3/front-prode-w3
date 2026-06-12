@@ -33,7 +33,7 @@ export default function GroupStandingsTable({
           <h2 className="font-display text-base font-bold">Tabla del grupo</h2>
           {simulating && (
             <p className="mt-0.5 text-xs font-medium text-w3-primary">
-              Simulada · tus predicciones
+              Tabla según tus predicciones
             </p>
           )}
         </div>
@@ -48,20 +48,22 @@ export default function GroupStandingsTable({
             Ver real
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={onSimulate}
-            disabled={!canSimulate}
-            title={
-              canSimulate
-                ? undefined
-                : 'Cargá predicciones en partidos pendientes para simular'
-            }
-            className="inline-flex w-full shrink-0 items-center justify-center rounded-w3-sm border border-w3-primary-border bg-w3-primary-soft px-3 py-1.5 text-[13px] font-semibold text-w3-primary transition-colors hover:bg-w3-primary/20 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-          >
-            <span className="sm:hidden">Simular predicciones</span>
-            <span className="hidden sm:inline">Simular con mis predicciones</span>
-          </button>
+          <div className="group relative w-full shrink-0 sm:w-auto">
+            <button
+              type="button"
+              onClick={onSimulate}
+              disabled={!canSimulate}
+              className="inline-flex w-full items-center justify-center rounded-w3-sm border border-w3-primary-border bg-w3-primary-soft px-3 py-1.5 text-[13px] font-semibold text-w3-primary transition-colors hover:bg-w3-primary/20 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            >
+              <span className="sm:hidden">Simular predicciones</span>
+              <span className="hidden sm:inline">Simular con mis predicciones</span>
+            </button>
+            {!canSimulate && (
+              <span className="pointer-events-none absolute right-0 top-full z-10 mt-1.5 hidden w-max max-w-[240px] rounded-md border border-w3-border bg-w3-surface-muted px-2.5 py-1.5 text-[11px] font-medium text-w3-text-secondary shadow-lg group-hover:block">
+                Cargá al menos una predicción en este grupo para simular tu tabla.
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -69,7 +71,14 @@ export default function GroupStandingsTable({
       <div className="mb-0.5 flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-w3-text-muted sm:gap-2 sm:px-2.5 sm:text-[13px]">
         <span className="w-4 text-center">#</span>
         <span className="min-w-0 flex-1">EQUIPO</span>
-        {showDelta && <span className="w-9 text-center">Δ</span>}
+        {showDelta && (
+          <span className="group relative w-9 cursor-help text-center">
+            Δ
+            <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-w3-border bg-w3-surface-muted px-2 py-1 text-[11px] font-medium normal-case text-w3-text-secondary shadow-lg group-hover:block">
+              Diferencia de posición respecto a la tabla real
+            </span>
+          </span>
+        )}
         {showDelta ? (
           <>
             <span className="w-8 text-right sm:w-10">SIM</span>
@@ -152,22 +161,32 @@ export default function GroupStandingsTable({
 function DeltaBadge({ delta }: { delta: number }) {
   if (delta > 0) {
     return (
-      <span className="flex w-9 items-center justify-center gap-0.5 text-[13px] font-semibold text-w3-primary">
+      <span
+        title={`Sube ${delta} ${delta === 1 ? 'posición' : 'posiciones'} respecto a la tabla real`}
+        className="flex w-9 items-center justify-center gap-0.5 text-[13px] font-semibold text-w3-primary"
+      >
         <ArrowUp className="h-3 w-3" />
         {delta}
       </span>
     );
   }
   if (delta < 0) {
+    const abs = Math.abs(delta);
     return (
-      <span className="flex w-9 items-center justify-center gap-0.5 text-[13px] font-semibold text-w3-live">
+      <span
+        title={`Baja ${abs} ${abs === 1 ? 'posición' : 'posiciones'} respecto a la tabla real`}
+        className="flex w-9 items-center justify-center gap-0.5 text-[13px] font-semibold text-w3-live"
+      >
         <ArrowDown className="h-3 w-3" />
-        {Math.abs(delta)}
+        {abs}
       </span>
     );
   }
   return (
-    <span className="flex w-9 items-center justify-center text-[13px] font-semibold text-w3-text-muted">
+    <span
+      title="Misma posición que en la tabla real"
+      className="flex w-9 items-center justify-center text-[13px] font-semibold text-w3-text-muted"
+    >
       <Minus className="h-3 w-3" />
     </span>
   );

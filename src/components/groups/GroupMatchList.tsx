@@ -70,22 +70,12 @@ function CompactMatchRow({ match }: { match: MatchView }) {
   const href = predictionHref(match);
   const linked = href != null;
 
-  const homeScore = finished
-    ? String(match.homeScore)
-    : hasPrediction
-      ? String(match.prediction!.homeScore)
-      : '–';
-  const awayScore = finished
-    ? String(match.awayScore)
-    : hasPrediction
-      ? String(match.prediction!.awayScore)
-      : '–';
+  // El marcador grande muestra SIEMPRE el resultado real; mientras no haya
+  // resultado se ve "– : –" y la predicción aparece en la línea de abajo.
+  const homeScore = finished ? String(match.homeScore) : '–';
+  const awayScore = finished ? String(match.awayScore) : '–';
 
-  const scoreColor = finished
-    ? 'text-w3-white'
-    : hasPrediction
-      ? 'text-w3-primary'
-      : 'text-w3-text-muted';
+  const scoreColor = finished ? 'text-w3-white' : 'text-w3-text-muted';
 
   const rowClass = [
     'block rounded-[10px] bg-w3-surface-muted px-3 py-3 sm:px-3.5',
@@ -122,20 +112,28 @@ function CompactMatchRow({ match }: { match: MatchView }) {
             <TeamFlag flagUrl={match.homeTeam.flagUrl} />
           </div>
 
-          <div className="flex shrink-0 items-center gap-1">
-            <span
-              className={`font-display text-lg font-bold tabular-nums ${scoreColor}`}
-            >
-              {homeScore}
-            </span>
-            <span className="font-display text-sm font-bold text-w3-text-muted">
-              :
-            </span>
-            <span
-              className={`font-display text-lg font-bold tabular-nums ${scoreColor}`}
-            >
-              {awayScore}
-            </span>
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              <span
+                className={`font-display text-lg font-bold tabular-nums ${scoreColor}`}
+              >
+                {homeScore}
+              </span>
+              <span className="font-display text-sm font-bold text-w3-text-muted">
+                :
+              </span>
+              <span
+                className={`font-display text-lg font-bold tabular-nums ${scoreColor}`}
+              >
+                {awayScore}
+              </span>
+            </div>
+            {hasPrediction && (
+              <PredictionSubline
+                prediction={match.prediction!}
+                finished={finished}
+              />
+            )}
           </div>
 
           <div className="flex min-w-0 items-center gap-2">
@@ -165,20 +163,28 @@ function CompactMatchRow({ match }: { match: MatchView }) {
           <TeamFlag flagUrl={match.homeTeam.flagUrl} />
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <span
-            className={`font-display text-xl font-bold tabular-nums ${scoreColor}`}
-          >
-            {homeScore}
-          </span>
-          <span className="font-display text-[15px] font-bold text-w3-text-muted">
-            :
-          </span>
-          <span
-            className={`font-display text-xl font-bold tabular-nums ${scoreColor}`}
-          >
-            {awayScore}
-          </span>
+        <div className="flex shrink-0 flex-col items-center gap-2">
+          <div className="flex items-center gap-1">
+            <span
+              className={`font-display text-xl font-bold tabular-nums ${scoreColor}`}
+            >
+              {homeScore}
+            </span>
+            <span className="font-display text-[15px] font-bold text-w3-text-muted">
+              :
+            </span>
+            <span
+              className={`font-display text-xl font-bold tabular-nums ${scoreColor}`}
+            >
+              {awayScore}
+            </span>
+          </div>
+          {hasPrediction && (
+            <PredictionSubline
+              prediction={match.prediction!}
+              finished={finished}
+            />
+          )}
         </div>
 
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -208,6 +214,32 @@ function CompactMatchRow({ match }: { match: MatchView }) {
   }
 
   return <div className={rowClass}>{content}</div>;
+}
+
+function PredictionSubline({
+  prediction,
+  finished,
+}: {
+  prediction: NonNullable<MatchView['prediction']>;
+  finished: boolean;
+}) {
+  const points = prediction.pointsAwarded ?? 0;
+  // En partidos sin jugar la predicción es tu pick activo (verde). Una vez
+  // finalizado, el color refleja el puntaje obtenido.
+  const color = !finished
+    ? 'text-w3-primary'
+    : points === 3
+      ? 'text-w3-primary'
+      : points === 1
+        ? 'text-w3-text-secondary'
+        : 'text-w3-text-muted';
+  return (
+    <span
+      className={`whitespace-nowrap text-[11px] font-semibold tabular-nums sm:text-xs ${color}`}
+    >
+      Tu predicción: {prediction.homeScore}–{prediction.awayScore}
+    </span>
+  );
 }
 
 function TeamFlag({ flagUrl }: { flagUrl: string | null }) {

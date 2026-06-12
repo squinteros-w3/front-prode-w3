@@ -46,7 +46,11 @@ function applyResult(
   }
 }
 
-/** Calcula tabla simulada: resultados reales + predicciones en partidos pendientes. */
+/**
+ * Calcula la "tabla ideal": usa tus predicciones como resultado en todos los
+ * partidos que predijiste (finalizados incluidos) y, para los que no predijiste,
+ * usa el resultado real si el partido ya terminó.
+ */
 export function simulateGroupStandings(
   group: GroupStanding,
   matches: MatchView[],
@@ -70,12 +74,7 @@ export function simulateGroupStandings(
   const groupMatches = matches.filter((m) => m.group === group.group);
 
   for (const m of groupMatches) {
-    if (m.status === 'FINISHED' && m.homeScore != null && m.awayScore != null) {
-      applyResult(rows, m.homeTeam.id, m.awayTeam.id, m.homeScore, m.awayScore);
-    } else if (
-      m.status === 'SCHEDULED' &&
-      m.prediction != null
-    ) {
+    if (m.prediction != null) {
       applyResult(
         rows,
         m.homeTeam.id,
@@ -83,6 +82,12 @@ export function simulateGroupStandings(
         m.prediction.homeScore,
         m.prediction.awayScore,
       );
+    } else if (
+      m.status === 'FINISHED' &&
+      m.homeScore != null &&
+      m.awayScore != null
+    ) {
+      applyResult(rows, m.homeTeam.id, m.awayTeam.id, m.homeScore, m.awayScore);
     }
   }
 
