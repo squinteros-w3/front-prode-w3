@@ -54,7 +54,10 @@ function SyncTab() {
     setState('running');
     setSummary(null);
     try {
-      const res = await fetch('/api/admin/sync', { method: 'POST' });
+      const res = await fetch('/api/admin/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
       if (!res.ok) throw new Error('Falló el sync');
       const data = await res.json();
       setSummary(
