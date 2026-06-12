@@ -91,7 +91,7 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       title={active ? 'Quitar filtro' : undefined}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-w3-sm border px-3.5 py-2 text-sm font-semibold transition-colors ${className} ${
+      className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-w3-sm border px-3.5 py-2 text-sm font-semibold transition-colors ${className} ${
         active
           ? 'border-w3-primary-border bg-w3-primary-soft text-w3-primary'
           : 'border-w3-border bg-w3-surface text-w3-text-secondary hover:text-w3-white'
