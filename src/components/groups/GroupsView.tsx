@@ -85,8 +85,7 @@ export default function GroupsView({
               Tabla de grupos
             </h1>
             <p className="mt-1.5 text-sm text-w3-text-secondary sm:text-[15px]">
-              Posiciones calculadas con los resultados de los partidos · los 2
-              primeros avanzan
+              Posiciones calculadas con los resultados de los partidos
             </p>
           </>
         )}
