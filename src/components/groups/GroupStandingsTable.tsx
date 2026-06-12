@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Minus, RotateCcw } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Minus, RotateCcw } from 'lucide-react';
 import type { SimulatedRow } from '../../lib/simulateStandings';
 import type { StandingRow } from '../../lib/types';
 
@@ -182,7 +182,7 @@ export function GroupStandingsOverviewCard({
   standings: StandingRow[];
 }) {
   return (
-    <div className="overflow-hidden rounded-w3-card border border-w3-border bg-w3-surface">
+    <div className="flex h-full flex-col overflow-hidden rounded-w3-card border border-w3-border bg-w3-surface transition-colors group-hover:border-w3-primary-border">
       <div className="flex items-center gap-2 border-b border-w3-border bg-w3-surface-muted px-4 py-2.5">
         <span className="grid h-6 w-6 place-items-center rounded-md bg-w3-primary text-xs font-extrabold text-w3-black">
           {group}
@@ -222,6 +222,11 @@ export function GroupStandingsOverviewCard({
             <span className="text-sm font-bold text-w3-primary">{s.pts}</span>
           </div>
         ))}
+      </div>
+
+      <div className="mt-auto flex items-center justify-end gap-1 border-t border-w3-border px-4 py-2 text-xs font-medium text-w3-text-muted transition-colors group-hover:text-w3-primary">
+        <span>Ver tabla y mis predicciones</span>
+        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
       </div>
     </div>
   );

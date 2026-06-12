@@ -135,7 +135,7 @@ export default function GroupsView({
               key={g.group}
               type="button"
               onClick={() => handleSelect(g.group)}
-              className="text-left transition-opacity hover:opacity-90"
+              className="group block h-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-w3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-w3-page-bg"
             >
               <GroupStandingsOverviewCard
                 group={g.group}
