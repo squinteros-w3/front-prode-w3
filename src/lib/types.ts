@@ -48,6 +48,8 @@ export interface LeaderboardEntry {
   user: { id: string; name: string; avatarUrl: string | null };
   points: number;
   exacts: number;
+  /** Predicciones con puntos (exacto + ganador acertado). */
+  hits: number;
   predictions: number;
 }
 

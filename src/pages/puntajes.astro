@@ -45,29 +45,29 @@ const toneStyles: Record<
   { card: string; badge: string; ring: string }
 > = {
   exact: {
-    card: 'border-w3-primary/40 bg-w3-primary/[0.07]',
+    card: 'border-w3-primary-border bg-w3-primary-soft',
     badge: 'bg-w3-primary text-w3-black',
-    ring: 'ring-w3-primary/40',
+    ring: 'ring-w3-primary-border',
   },
   outcome: {
-    card: 'border-w3-primary/20 bg-white/[0.03]',
-    badge: 'bg-w3-primary/20 text-w3-primary',
-    ring: 'ring-white/10',
+    card: 'border-w3-border bg-w3-surface',
+    badge: 'bg-w3-primary-soft text-w3-primary',
+    ring: 'ring-w3-border',
   },
   miss: {
-    card: 'border-white/10 bg-white/[0.02]',
-    badge: 'bg-white/10 text-white/50',
-    ring: 'ring-white/10',
+    card: 'border-w3-border bg-w3-surface-muted',
+    badge: 'bg-w3-score-box text-w3-text-muted',
+    ring: 'ring-w3-border',
   },
 };
 ---
 
 <Layout title="Puntos — Prode W3" active="puntos">
   <div class="mb-8 text-center sm:mb-10">
-    <h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">
+    <h1 class="font-display text-2xl font-extrabold tracking-tight sm:text-[34px]">
       ¿Cómo se suman los puntos?
     </h1>
-    <p class="mx-auto mt-2 max-w-md text-sm text-white/50">
+    <p class="mx-auto mt-2 max-w-md text-sm text-w3-text-secondary sm:text-[15px]">
       Cargás tu marcador antes de cada partido. Cuando termina, sumás según
       cuánto le acertaste.
     </p>
@@ -80,7 +80,7 @@ const toneStyles: Record<
         return (
           <div
             class:list={[
-              'flex flex-col items-center gap-5 rounded-2xl border p-5 sm:flex-row sm:gap-6 sm:p-6',
+              'flex flex-col items-center gap-5 rounded-w3-card border p-5 sm:flex-row sm:gap-6 sm:p-6',
               s.card,
             ]}
           >
@@ -93,31 +93,31 @@ const toneStyles: Record<
               >
                 +{r.points}
               </span>
-              <span class="mt-1.5 text-[11px] uppercase tracking-wide text-white/40">
+              <span class="mt-1.5 text-[11px] uppercase tracking-wide text-w3-text-muted">
                 {r.points === 1 ? 'punto' : 'puntos'}
               </span>
             </div>
 
             <div class="min-w-0 flex-1 text-center sm:text-left">
-              <h2 class="text-lg font-bold">{r.title}</h2>
-              <p class="mt-0.5 text-sm text-white/50">{r.desc}</p>
+              <h2 class="font-display text-lg font-bold">{r.title}</h2>
+              <p class="mt-0.5 text-sm text-w3-text-secondary">{r.desc}</p>
             </div>
 
             <div
               class:list={[
-                'flex shrink-0 gap-3 rounded-xl bg-w3-black/40 p-3 ring-1',
+                'flex shrink-0 gap-3 rounded-xl bg-w3-surface-muted p-3 ring-1',
                 s.ring,
               ]}
             >
               <div class="text-center">
-                <p class="mb-1 text-[10px] uppercase tracking-wide text-white/40">
+                <p class="mb-1 text-[10px] uppercase tracking-wide text-w3-text-muted">
                   Tu predicción
                 </p>
                 <Scoreline a={r.pred[0]} b={r.pred[1]} />
               </div>
-              <div class="w-px self-stretch bg-white/10" />
+              <div class="w-px self-stretch bg-w3-border" />
               <div class="text-center">
-                <p class="mb-1 text-[10px] uppercase tracking-wide text-white/40">
+                <p class="mb-1 text-[10px] uppercase tracking-wide text-w3-text-muted">
                   Resultado
                 </p>
                 <Scoreline a={r.real[0]} b={r.real[1]} />
@@ -130,18 +130,18 @@ const toneStyles: Record<
   </div>
 
   <div class="mt-8 grid gap-3 sm:grid-cols-2">
-    <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-      <p class="text-sm font-semibold text-w3-primary">Desempate</p>
-      <p class="mt-1 text-sm text-white/55">
+    <div class="rounded-w3-card border border-w3-border bg-w3-surface p-4">
+      <p class="font-display text-sm font-bold text-w3-primary">Desempate</p>
+      <p class="mt-1 text-sm text-w3-text-secondary">
         Si dos personas tienen los mismos puntos, queda arriba quien tenga más
-        <strong class="text-white/80"> resultados exactos</strong>.
+        <strong class="text-w3-white"> resultados exactos</strong>.
       </p>
     </div>
-    <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-      <p class="text-sm font-semibold text-w3-primary">Cierre de predicción</p>
-      <p class="mt-1 text-sm text-white/55">
+    <div class="rounded-w3-card border border-w3-border bg-w3-surface p-4">
+      <p class="font-display text-sm font-bold text-w3-primary">Cierre de predicción</p>
+      <p class="mt-1 text-sm text-w3-text-secondary">
         Cada partido se cierra
-        <strong class="text-white/80"> 15 minutos antes</strong> del inicio
+        <strong class="text-w3-white"> 15 minutos antes</strong> del inicio
         (horario argentino). Después no se puede editar.
       </p>
     </div>

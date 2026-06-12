@@ -25,11 +25,11 @@ const cards = stats
 <Layout title="Perfil — Prode W3" active="perfil">
   <div class="mb-8 flex flex-col items-center text-center">
     <AvatarEditor client:load name={user.name} avatarUrl={user.avatarUrl} />
-    <h1 class="mt-4 text-xl font-extrabold">{user.name}</h1>
-    <p class="text-sm text-white/40">{user.email}</p>
+    <h1 class="font-display mt-4 text-xl font-extrabold sm:text-2xl">{user.name}</h1>
+    <p class="text-sm text-w3-text-muted">{user.email}</p>
     {
       user.role === 'ADMIN' && (
-        <span class="mt-2 rounded-full bg-w3-primary/15 px-3 py-0.5 text-xs font-medium text-w3-primary">
+        <span class="mt-2 rounded-full border border-w3-primary-border bg-w3-primary-soft px-3 py-0.5 text-xs font-medium text-w3-primary">
           Administrador
         </span>
       )
@@ -41,10 +41,10 @@ const cards = stats
       cards.map((c) => (
         <div
           class:list={[
-            'rounded-xl border p-4 text-center',
+            'rounded-w3-card border p-4 text-center',
             c.accent
-              ? 'border-w3-primary/30 bg-w3-primary/10'
-              : 'border-white/10 bg-white/[0.03]',
+              ? 'border-w3-primary-border bg-w3-primary-soft'
+              : 'border-w3-border bg-w3-surface',
           ]}
         >
           <div
@@ -55,10 +55,10 @@ const cards = stats
           >
             {c.value}
           </div>
-          <div class="mt-1 text-xs uppercase tracking-wide text-white/40">
+          <div class="mt-1 text-xs uppercase tracking-wide text-w3-text-muted">
             {c.label}
           </div>
-          {c.sub && <div class="text-[10px] text-white/30">{c.sub}</div>}
+          {c.sub && <div class="text-[10px] text-w3-text-muted">{c.sub}</div>}
         </div>
       ))
     }
@@ -68,10 +68,10 @@ const cards = stats
     stats && (
       <section>
         <div class="mb-3">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-white/50">
+          <h2 class="font-display text-sm font-bold uppercase tracking-wide text-w3-text-secondary">
             Medallas
           </h2>
-          <p class="mt-0.5 text-xs text-white/40">
+          <p class="mt-0.5 text-xs text-w3-text-muted">
             Son logros y no suman puntos — el puntaje sale solo de tus predicciones.
           </p>
         </div>
@@ -79,23 +79,23 @@ const cards = stats
           {stats.medals.map((m) => (
             <div
               class:list={[
-                'flex items-center gap-3 rounded-xl border p-3 transition-opacity',
+                'flex items-center gap-3 rounded-w3-card border p-3 transition-opacity',
                 m.earned
-                  ? 'border-w3-primary/30 bg-w3-primary/5'
-                  : 'border-white/10 bg-white/[0.02] opacity-40',
+                  ? 'border-w3-primary-border bg-w3-primary-soft/50'
+                  : 'border-w3-border bg-w3-surface opacity-40',
               ]}
             >
               <span
                 class:list={[
                   'grid h-10 w-10 shrink-0 place-items-center rounded-lg text-lg',
-                  m.earned ? 'bg-w3-primary text-w3-black' : 'bg-white/10',
+                  m.earned ? 'bg-w3-primary text-w3-black' : 'bg-w3-score-box',
                 ]}
               >
                 {m.earned ? '★' : '☆'}
               </span>
               <div class="min-w-0">
                 <p class="truncate text-sm font-semibold">{m.label}</p>
-                <p class="truncate text-xs text-white/40">{m.description}</p>
+                <p class="truncate text-xs text-w3-text-muted">{m.description}</p>
               </div>
             </div>
           ))}

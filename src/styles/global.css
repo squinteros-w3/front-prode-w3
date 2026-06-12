@@ -6,8 +6,35 @@
   --color-w3-primary: #4bc083;
   --color-w3-primary-dark: #2f9c66;
 
+  --color-w3-page-bg: #070807;
+  --color-w3-surface: #141613;
+  --color-w3-surface-muted: #101210;
+  --color-w3-score-box: #1c1f1c;
+  --color-w3-border: #262926;
+  --color-w3-border-strong: #343834;
+  --color-w3-primary-soft: #10271b;
+  --color-w3-primary-border: #2c5a40;
+  --color-w3-text-secondary: #a2aaa4;
+  --color-w3-text-muted: #6b736d;
+  --color-w3-live: #ff5247;
+  --color-w3-live-soft: #2a1210;
+  --color-w3-live-border: #5e231e;
+  --color-w3-warn: #e8b14b;
+  --color-w3-warn-soft: #2a2110;
+
+  --color-w3-gold: #f5c542;
+  --color-w3-gold-soft: #2a2310;
+  --color-w3-silver: #c9ced6;
+  --color-w3-silver-soft: #1f2329;
+  --color-w3-bronze: #cf8b54;
+  --color-w3-bronze-soft: #271a10;
+
+  --radius-w3-card: 18px;
+  --radius-w3-sm: 10px;
+
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
     Roboto, sans-serif;
+  --font-display: 'Sora', 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -39,5 +66,9 @@
         transparent 0
       );
     background-size: 28px 28px;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
   }
 }

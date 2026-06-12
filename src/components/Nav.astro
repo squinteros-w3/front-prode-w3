@@ -36,12 +36,12 @@ const initials = user.name
 ---
 
 <header
-  class="sticky top-0 z-40 border-b border-white/10 bg-w3-black/80 backdrop-blur-md"
+  class="sticky top-0 z-40 border-b border-w3-border bg-w3-surface/90 backdrop-blur-md"
 >
-  <nav class="mx-auto flex h-16 w-full max-w-5xl items-center gap-4 px-4 sm:px-6">
+  <nav class="mx-auto flex h-16 w-full max-w-7xl items-center gap-4 px-3 sm:px-6 lg:px-10">
     <a
       href="/partidos"
-      class="flex items-center gap-2.5 font-extrabold tracking-tight"
+      class="font-display flex items-center gap-2.5 font-extrabold tracking-tight"
     >
       <svg
         class="h-7 w-auto text-w3-primary"
@@ -67,8 +67,8 @@ const initials = user.name
             class:list={[
               'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               active === l.key
-                ? 'bg-w3-primary/15 text-w3-primary'
-                : 'text-white/70 hover:bg-white/5 hover:text-white',
+                ? 'bg-w3-primary-soft text-w3-primary'
+                : 'text-w3-text-secondary hover:bg-w3-score-box hover:text-w3-white',
             ]}
           >
             {l.label}
@@ -86,7 +86,7 @@ const initials = user.name
             class="h-9 w-9 rounded-full border border-white/15 object-cover"
           />
         ) : (
-          <span class="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xs font-semibold">
+          <span class="grid h-9 w-9 place-items-center rounded-full border border-w3-primary-border bg-w3-primary-soft text-xs font-semibold text-w3-primary">
             {initials}
           </span>
         )
@@ -94,7 +94,7 @@ const initials = user.name
       <a
         href="/api/auth/logout"
         title="Cerrar sesión"
-        class="hidden text-sm text-white/50 transition-colors hover:text-white lg:inline"
+        class="hidden text-sm text-w3-text-secondary transition-colors hover:text-w3-white lg:inline"
         >Salir</a
       >
 
@@ -104,7 +104,7 @@ const initials = user.name
         type="button"
         aria-label="Abrir menú"
         aria-expanded="false"
-        class="grid h-9 w-9 place-items-center rounded-lg border border-white/15 text-white/80 transition-colors hover:bg-white/5 lg:hidden"
+        class="grid h-9 w-9 place-items-center rounded-lg border border-w3-border text-w3-text-secondary transition-colors hover:bg-w3-score-box lg:hidden"
       >
         <svg
           id="navIconOpen"
@@ -135,9 +135,9 @@ const initials = user.name
   {/* Menú mobile desplegable */}
   <div
     id="mobileMenu"
-    class="hidden border-t border-white/10 bg-w3-black/95 px-4 pb-4 pt-2 backdrop-blur-md lg:hidden"
+    class="hidden border-t border-w3-border bg-w3-surface/95 px-3 pb-4 pt-2 backdrop-blur-md lg:hidden"
   >
-    <div class="mx-auto flex w-full max-w-5xl flex-col gap-1">
+    <div class="mx-auto flex w-full max-w-7xl flex-col gap-1">
       {
         links.map((l) => (
           <a
@@ -145,8 +145,8 @@ const initials = user.name
             class:list={[
               'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
               active === l.key
-                ? 'bg-w3-primary/15 text-w3-primary'
-                : 'text-white/80 hover:bg-white/5',
+                ? 'bg-w3-primary-soft text-w3-primary'
+                : 'text-w3-text-secondary hover:bg-w3-score-box',
             ]}
           >
             {l.label}
@@ -155,7 +155,7 @@ const initials = user.name
       }
       <a
         href="/api/auth/logout"
-        class="mt-1 rounded-lg px-3 py-2.5 text-sm font-medium text-white/50 hover:bg-white/5"
+        class="mt-1 rounded-lg px-3 py-2.5 text-sm font-medium text-w3-text-muted hover:bg-w3-score-box"
         >Cerrar sesión</a
       >
     </div>

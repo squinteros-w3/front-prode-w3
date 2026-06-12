@@ -1,119 +1,26 @@
 ---
+import GroupsView from '../components/groups/GroupsView.tsx';
 import Layout from '../layouts/Layout.astro';
-import { getGroups } from '../lib/api';
+import { getGroups, getMatches } from '../lib/api';
 
 export const prerender = false;
 
-const groups = await getGroups(Astro.locals.token);
-const anyPlayed = groups.some((g) => g.standings.some((s) => s.mp > 0));
+const [groups, matches] = await Promise.all([
+  getGroups(Astro.locals.token),
+  getMatches(Astro.locals.token),
+]);
+
+const grupoParam = Astro.url.searchParams.get('grupo');
+const validGroups = new Set(groups.map((g) => g.group));
+const initialGroup =
+  grupoParam && validGroups.has(grupoParam) ? grupoParam : null;
 ---
 
 <Layout title="Grupos — Prode W3" active="grupos">
-  <div class="mb-6">
-    <h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">
-      Tabla de grupos
-    </h1>
-    <p class="mt-1 text-sm text-white/50">
-      Posiciones calculadas con los resultados de los partidos · los 2 primeros
-      avanzan.
-    </p>
-  </div>
-
-  {
-    !anyPlayed && (
-      <p class="mb-6 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/50">
-        Todavía no se jugaron partidos. Las posiciones se van a ir actualizando a
-        medida que carguen los resultados.
-      </p>
-    )
-  }
-
-  <div class="grid gap-4 sm:grid-cols-2">
-    {
-      groups.map((g) => (
-        <div class="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-          <div class="flex items-center gap-2 border-b border-white/10 bg-white/[0.03] px-4 py-2.5">
-            <span class="grid h-6 w-6 place-items-center rounded-md bg-w3-primary text-xs font-extrabold text-w3-black">
-              {g.group}
-            </span>
-            <span class="text-sm font-bold">Grupo {g.group}</span>
-          </div>
-
-          <table class="w-full text-sm">
-            <thead class="text-[11px] uppercase tracking-wide text-white/40">
-              <tr>
-                <th class="py-2 pl-3 text-left font-medium">#</th>
-                <th class="py-2 text-left font-medium">Equipo</th>
-                <th class="py-2 text-center font-medium">PJ</th>
-                <th class="hidden py-2 text-center font-medium sm:table-cell">G</th>
-                <th class="hidden py-2 text-center font-medium sm:table-cell">E</th>
-                <th class="hidden py-2 text-center font-medium sm:table-cell">P</th>
-                <th class="py-2 text-center font-medium">DG</th>
-                <th class="py-2 pr-3 text-center font-medium">Pts</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-              {g.standings.map((s, i) => (
-                <tr class:list={[i < 2 ? 'bg-w3-primary/[0.06]' : '']}>
-                  <td class="py-2 pl-3">
-                    <span
-                      class:list={[
-                        'grid h-5 w-5 place-items-center rounded text-[11px] font-bold',
-                        i < 2
-                          ? 'bg-w3-primary/25 text-w3-primary'
-                          : 'text-white/40',
-                      ]}
-                    >
-                      {i + 1}
-                    </span>
-                  </td>
-                  <td class="py-2">
-                    <div class="flex items-center gap-2">
-                      {s.team.flagUrl ? (
-                        <img
-                          src={s.team.flagUrl}
-                          alt=""
-                          class="h-4 w-6 rounded-sm object-cover ring-1 ring-white/10"
-                        />
-                      ) : (
-                        <span class="h-4 w-6 rounded-sm bg-white/10" />
-                      )}
-                      <span class="truncate font-medium">
-                        <span class="sm:hidden">{s.team.code ?? s.team.name}</span>
-                        <span class="hidden sm:inline">{s.team.name}</span>
-                      </span>
-                    </div>
-                  </td>
-                  <td class="py-2 text-center text-white/60">{s.mp}</td>
-                  <td class="hidden py-2 text-center text-white/60 sm:table-cell">
-                    {s.w}
-                  </td>
-                  <td class="hidden py-2 text-center text-white/60 sm:table-cell">
-                    {s.d}
-                  </td>
-                  <td class="hidden py-2 text-center text-white/60 sm:table-cell">
-                    {s.l}
-                  </td>
-                  <td class="py-2 text-center text-white/60">
-                    {s.gd > 0 ? `+${s.gd}` : s.gd}
-                  </td>
-                  <td class="py-2 pr-3 text-center font-bold text-w3-primary">
-                    {s.pts}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))
-    }
-  </div>
-
-  {
-    groups.length === 0 && (
-      <p class="rounded-xl border border-white/10 bg-white/[0.03] p-6 text-center text-white/50">
-        Todavía no hay grupos cargados. Sincronizá desde el panel de Admin.
-      </p>
-    )
-  }
+  <GroupsView
+    client:load
+    groups={groups}
+    matches={matches}
+    initialGroup={initialGroup}
+  />
 </Layout>

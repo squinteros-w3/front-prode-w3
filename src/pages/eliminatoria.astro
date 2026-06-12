@@ -51,20 +51,20 @@ function wentToPens(m: MatchView): boolean {
 
 <Layout title="Eliminatoria — Prode W3" active="eliminatoria">
   <div class="mb-6">
-    <h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl">
+    <h1 class="font-display text-2xl font-extrabold tracking-tight sm:text-[34px]">
       Fase eliminatoria
     </h1>
-    <p class="mt-1 text-sm text-white/50">
+    <p class="mt-1.5 text-sm text-w3-text-secondary sm:text-[15px]">
       Las llaves se completan automáticamente a medida que avanza el Mundial.
     </p>
   </div>
 
   {
     byStage.length === 0 ? (
-      <div class="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
+      <div class="rounded-w3-card border border-w3-border bg-w3-surface p-8 text-center">
         <p class="text-4xl">🏆</p>
         <p class="mt-3 font-semibold">La eliminatoria todavía no arrancó</p>
-        <p class="mx-auto mt-1 max-w-sm text-sm text-white/50">
+        <p class="mx-auto mt-1 max-w-sm text-sm text-w3-text-secondary">
           Cuando terminen los grupos y se definan los cruces, vas a ver acá las
           llaves con sus resultados.
         </p>
@@ -73,9 +73,9 @@ function wentToPens(m: MatchView): boolean {
       <div class="space-y-8">
         {byStage.map((s) => (
           <section>
-            <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-w3-primary">
+            <h2 class="mb-3 flex items-center gap-2 text-[13px] font-bold uppercase tracking-wide text-w3-primary">
               {s.label}
-              <span class="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/40">
+              <span class="rounded-full bg-w3-score-box px-2 py-0.5 text-[11px] text-w3-text-muted">
                 {s.matches.length}
               </span>
             </h2>
@@ -84,15 +84,15 @@ function wentToPens(m: MatchView): boolean {
                 const win = winner(m);
                 const finished = m.status === 'FINISHED';
                 return (
-                  <div class="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <div class="mb-2 flex items-center justify-between text-xs text-white/40">
-                      <span>{formatKickoff(m.kickoffAt)} hs</span>
+                  <div class="rounded-2xl border border-w3-border bg-w3-surface p-4 sm:rounded-w3-card">
+                    <div class="mb-2 flex items-center justify-between text-xs text-w3-text-muted">
+                      <span>{formatKickoff(m.kickoffAt)}</span>
                       <span
                         class:list={[
                           'rounded-full px-2 py-0.5 font-medium',
                           finished
-                            ? 'bg-white/10 text-white/60'
-                            : 'bg-w3-primary/15 text-w3-primary',
+                            ? 'bg-w3-score-box text-w3-text-secondary'
+                            : 'bg-w3-primary-soft text-w3-primary',
                         ]}
                       >
                         {finished ? 'Finalizado' : 'Por jugarse'}
@@ -106,7 +106,7 @@ function wentToPens(m: MatchView): boolean {
                       finished={finished}
                       isWinner={win === 'home'}
                     />
-                    <div class="my-1 h-px bg-white/5" />
+                    <div class="my-1 h-px bg-w3-border" />
                     <TeamRow
                       name={m.awayTeam.name}
                       flagUrl={m.awayTeam.flagUrl}
@@ -116,11 +116,11 @@ function wentToPens(m: MatchView): boolean {
                     />
 
                     {wentToPens(m) && (
-                      <div class="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-white/[0.04] py-1.5 text-xs text-white/60">
+                      <div class="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-w3-surface-muted py-1.5 text-xs text-w3-text-secondary">
                         <span aria-hidden="true">⚽</span>
                         <span>
                           Definido por penales{' '}
-                          <strong class="text-white/90">
+                          <strong class="text-w3-white">
                             {m.homePenalties}–{m.awayPenalties}
                           </strong>
                         </span>
