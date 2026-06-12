@@ -1,5 +1,4 @@
-import { Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { LeaderboardEntry } from '../../lib/types';
 
 function initials(name: string): string {
@@ -17,8 +16,6 @@ interface Props {
 }
 
 export default function LeaderboardView({ board, meId }: Props) {
-  const [query, setQuery] = useState('');
-
   const me = useMemo(
     () => board.find((e) => e.user.id === meId) ?? null,
     [board, meId],
@@ -26,12 +23,6 @@ export default function LeaderboardView({ board, meId }: Props) {
   const leader = board[0] ?? null;
   const gapToLeader = me && leader ? leader.points - me.points : 0;
   const podium = board.slice(0, 3);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return board;
-    return board.filter((e) => e.user.name.toLowerCase().includes(q));
-  }, [board, query]);
 
   return (
     <div className="space-y-6">
@@ -55,18 +46,8 @@ export default function LeaderboardView({ board, meId }: Props) {
       {podium.length >= 3 && <Podium podium={podium} />}
 
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center">
         <h2 className="font-display text-lg font-bold">Clasificación general</h2>
-        <div className="flex items-center gap-2 rounded-w3-sm border border-w3-border bg-w3-surface px-3.5 py-2 sm:w-[280px]">
-          <Search className="h-4 w-4 shrink-0 text-w3-text-muted" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar jugador…"
-            className="w-full min-w-0 bg-transparent text-sm text-w3-white outline-none placeholder:text-w3-text-muted"
-            aria-label="Buscar jugador"
-          />
-        </div>
       </div>
 
       {/* Table */}
@@ -80,16 +61,14 @@ export default function LeaderboardView({ board, meId }: Props) {
         </div>
 
         <div className="divide-y divide-w3-border">
-          {filtered.map((e) => (
+          {board.map((e) => (
             <Row key={e.user.id} entry={e} isMe={e.user.id === meId} />
           ))}
         </div>
 
-        {filtered.length === 0 && (
+        {board.length === 0 && (
           <p className="px-4 py-8 text-center text-sm text-w3-text-muted">
-            {board.length === 0
-              ? 'Todavía no hay puntajes.'
-              : 'Ningún jugador coincide con la búsqueda.'}
+            Todavía no hay puntajes.
           </p>
         )}
       </div>

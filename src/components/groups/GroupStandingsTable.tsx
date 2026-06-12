@@ -145,13 +145,6 @@ export default function GroupStandingsTable({
           );
         })}
       </div>
-
-      <div className="mt-3 flex items-center gap-1.5 px-0.5">
-        <span className="h-3 w-0.5 rounded-sm bg-w3-primary" />
-        <span className="text-xs font-medium text-w3-text-muted">
-          Zona de clasificación · avanzan a octavos
-        </span>
-      </div>
     </div>
   );
 }
