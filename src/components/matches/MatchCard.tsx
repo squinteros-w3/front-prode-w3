@@ -237,9 +237,19 @@ export default function MatchCard({
       {/* Meta: siempre una sola fila */}
       <div className="mb-2.5 flex items-center justify-between gap-2 sm:mb-4">
         <div className="flex min-w-0 items-center gap-1.5 overflow-hidden sm:gap-2.5">
-          <span className="shrink-0 rounded-md border border-w3-border bg-w3-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-w3-text-secondary sm:rounded-lg sm:px-2 sm:text-xs">
-            {stageLabel(match)}
-          </span>
+          {match.group ? (
+            <a
+              href={`/grupos?grupo=${match.group}`}
+              title={`Ver el Grupo ${match.group}`}
+              className="shrink-0 cursor-pointer rounded-md border border-w3-border bg-w3-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-w3-text-secondary transition-colors hover:border-w3-primary-border hover:text-w3-primary sm:rounded-lg sm:px-2 sm:text-xs"
+            >
+              {stageLabel(match)}
+            </a>
+          ) : (
+            <span className="shrink-0 rounded-md border border-w3-border bg-w3-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-w3-text-secondary sm:rounded-lg sm:px-2 sm:text-xs">
+              {stageLabel(match)}
+            </span>
+          )}
           <span className="truncate text-[11px] font-medium text-w3-text-muted sm:hidden">
             {formatKickoffCompact(match.kickoffAt)}
           </span>
