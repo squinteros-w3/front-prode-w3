@@ -129,8 +129,8 @@ function TabButton({
       onClick={onClick}
       className={`flex items-center justify-center gap-1.5 rounded-[9px] px-4 py-2 text-sm font-medium transition-colors ${className} ${
         active
-          ? 'bg-w3-primary font-semibold text-w3-black'
-          : 'text-w3-text-secondary hover:text-w3-white'
+          ? 'cursor-default bg-w3-primary font-semibold text-w3-black'
+          : 'cursor-pointer text-w3-text-secondary hover:text-w3-white'
       }`}
     >
       {label}
