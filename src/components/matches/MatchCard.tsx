@@ -9,9 +9,25 @@ import {
 import { useEffect, useState } from 'react';
 import { formatKickoff, formatKickoffCompact } from '../../lib/format';
 import { getPhase, stageLabel, type PhaseInfo } from '../../lib/matchPhase';
-import type { MatchPrediction, MatchView } from '../../lib/types';
+import type {
+  LiveGoal,
+  LiveState,
+  MatchPrediction,
+  MatchView,
+} from '../../lib/types';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+function goalMinute(g: LiveGoal): string {
+  if (g.minute == null) return '';
+  return g.addedMinute ? `${g.minute}+${g.addedMinute}'` : `${g.minute}'`;
+}
+
+function goalNote(g: LiveGoal): string {
+  if (g.ownGoal) return ' (e/c)';
+  if (g.penalty) return ' (p)';
+  return '';
+}
 
 function StatusBadge({ phase }: { phase: PhaseInfo }) {
   return (
@@ -54,11 +70,13 @@ function ScoreStepper({
   onChange,
   editable,
   highlight,
+  live = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   editable: boolean;
   highlight: boolean;
+  live?: boolean;
 }) {
   const num = value === '' ? null : Number(value);
 
@@ -68,16 +86,20 @@ function ScoreStepper({
     onChange(String(next));
   }
 
-  const boxClass = highlight
-    ? 'border-w3-primary-border bg-w3-primary-soft'
-    : 'border-w3-border-strong bg-w3-score-box';
+  const boxClass = live
+    ? 'border-w3-live/50 bg-w3-live-soft'
+    : highlight
+      ? 'border-w3-primary-border bg-w3-primary-soft'
+      : 'border-w3-border-strong bg-w3-score-box';
 
   if (!editable) {
     return (
       <div
         className={`flex w-14 flex-col items-center justify-center rounded-xl border py-1.5 sm:w-[60px] sm:py-2 ${boxClass}`}
       >
-        <span className="font-display text-xl font-bold tabular-nums text-w3-white sm:text-[26px]">
+        <span
+          className={`font-display text-xl font-bold tabular-nums sm:text-[26px] ${live ? 'text-w3-live' : 'text-w3-white'}`}
+        >
           {value === '' ? '–' : value}
         </span>
       </div>
@@ -129,10 +151,12 @@ function scoresFromPrediction(prediction: MatchView['prediction']) {
 export default function MatchCard({
   match,
   now,
+  live = null,
   onPredictionSaved,
 }: {
   match: MatchView;
   now: number;
+  live?: LiveState | null;
   onPredictionSaved?: (matchId: string, prediction: MatchPrediction) => void;
 }) {
   const initial = scoresFromPrediction(match.prediction);
@@ -154,7 +178,9 @@ export default function MatchCard({
 
   const editable = !match.locked && match.status === 'SCHEDULED';
   const finished = match.status === 'FINISHED';
-  const phase = getPhase(match, now);
+  const phase = getPhase(match, now, live);
+  // Marcador real en juego: solo mientras el backend no oficializó el resultado.
+  const showLive = live != null && !finished;
 
   const hasSaved = savedHome !== '' && savedAway !== '';
   const bothFilled = home !== '' && away !== '';
@@ -173,11 +199,18 @@ export default function MatchCard({
 
   const cardBg = finished ? 'bg-w3-surface-muted' : 'bg-w3-surface';
 
-  // Los casilleros grandes muestran TU PREDICCIÓN. En edición usan el valor que
-  // estás cargando; en partidos finalizados o cerrados muestran el pronóstico
-  // guardado. El resultado real se ve solo en el footer.
-  const displayHome = editable ? home : savedHome;
-  const displayAway = editable ? away : savedAway;
+  // Casilleros grandes: en edición, lo que cargás; EN VIVO, el marcador REAL
+  // (tu predicción pasa al footer); en finalizados/cerrados, tu pronóstico.
+  const displayHome = editable
+    ? home
+    : showLive && live
+      ? String(live.homeScore)
+      : savedHome;
+  const displayAway = editable
+    ? away
+    : showLive && live
+      ? String(live.awayScore)
+      : savedAway;
 
   async function save() {
     const h = Number(home);
@@ -278,6 +311,7 @@ export default function MatchCard({
             onChange={handleHome}
             editable={editable}
             highlight={openNoPrediction}
+            live={showLive}
           />
           <span className="font-display text-base font-bold text-w3-text-muted sm:text-[22px]">
             :
@@ -287,6 +321,7 @@ export default function MatchCard({
             onChange={handleAway}
             editable={editable}
             highlight={openNoPrediction}
+            live={showLive}
           />
         </div>
 
@@ -301,8 +336,65 @@ export default function MatchCard({
         </div>
       </div>
 
+      {/* Goleadores en vivo, alineados a cada equipo. */}
+      {showLive && live && live.goals.length > 0 && (
+        <div className="mt-2.5 grid grid-cols-2 gap-x-3 border-t border-w3-border/60 pt-2 text-[11px] leading-tight text-w3-text-secondary sm:text-xs">
+          <div className="space-y-0.5">
+            {live.goals
+              .filter((g) => g.team === 'home')
+              .map((g, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <span className="shrink-0 text-w3-text-muted">⚽</span>
+                  <span className="truncate">
+                    {g.player}
+                    {goalNote(g)}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-w3-text-muted">
+                    {goalMinute(g)}
+                  </span>
+                </div>
+              ))}
+          </div>
+          <div className="space-y-0.5 text-right">
+            {live.goals
+              .filter((g) => g.team === 'away')
+              .map((g, i) => (
+                <div key={i} className="flex items-center justify-end gap-1">
+                  <span className="shrink-0 tabular-nums text-w3-text-muted">
+                    {goalMinute(g)}
+                  </span>
+                  <span className="truncate">
+                    {g.player}
+                    {goalNote(g)}
+                  </span>
+                  <span className="shrink-0 text-w3-text-muted">⚽</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* Footer compacto en mobile */}
       <div className="mt-2 flex min-h-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-1.5 text-center sm:min-h-[34px] sm:pt-2">
+        {/* EN VIVO: el resultado real está en los casilleros de arriba; acá
+            mostramos TU predicción con la misma jerarquía para comparar. */}
+        {showLive && (
+          <span className="inline-flex items-center gap-2 rounded-full border border-w3-border bg-w3-surface-muted px-3 py-1 sm:gap-2.5 sm:px-3.5 sm:py-1.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wide text-w3-text-muted sm:text-[11px]">
+              Tu predicción
+            </span>
+            {hasSaved ? (
+              <span className="font-display text-lg font-extrabold tabular-nums leading-none text-w3-text-secondary sm:text-xl">
+                {savedHome}–{savedAway}
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-w3-text-muted sm:text-[13px]">
+                sin cargar
+              </span>
+            )}
+          </span>
+        )}
+
         {finished && (
           <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
             <span className="text-xs font-medium text-w3-text-secondary sm:text-[13px]">
@@ -332,7 +424,7 @@ export default function MatchCard({
           </div>
         )}
 
-        {lockedWithPrediction && !finished && (
+        {lockedWithPrediction && !finished && !showLive && (
           <span className="inline-flex items-center gap-1 rounded-full border border-w3-border bg-w3-surface-muted px-2 py-0.5 text-xs font-semibold text-w3-text-secondary sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[13px]">
             <Lock className="h-3 w-3 text-w3-text-muted" />
             <span className="sm:hidden">Pronóstico cerrado</span>
@@ -382,7 +474,7 @@ export default function MatchCard({
           </>
         )}
 
-        {!editable && !finished && !hasSaved && (
+        {!editable && !finished && !hasSaved && !showLive && (
           <span className="text-xs font-medium text-w3-text-muted sm:text-[13px]">
             Sin predicción
           </span>

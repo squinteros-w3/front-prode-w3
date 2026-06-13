@@ -43,6 +43,30 @@ export interface MatchView {
   prediction: MatchPrediction | null;
 }
 
+// Overlay de marcador en vivo (backend src/live, fuente elnine). Efímero y
+// best-effort: si falta, las cards caen al modo honesto de siempre.
+export interface LiveGoal {
+  team: 'home' | 'away';
+  player: string;
+  minute: number | null;
+  addedMinute?: number;
+  ownGoal?: boolean;
+  penalty?: boolean;
+}
+
+export interface LiveState {
+  matchId: string;
+  status: 'live' | 'finished';
+  minute: number | null;
+  period: string; // 1T | HT | 2T | FT | ...
+  homeScore: number;
+  awayScore: number;
+  goals: LiveGoal[];
+  fetchedAt: number;
+}
+
+export type LiveMap = Record<string, LiveState>;
+
 export interface LeaderboardEntry {
   rank: number;
   user: { id: string; name: string; avatarUrl: string | null };

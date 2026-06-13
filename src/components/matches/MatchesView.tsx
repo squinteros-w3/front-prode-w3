@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { dayKey, formatDayUpper, todayKey } from '../../lib/format';
 import { getPhase, type StatusFilter } from '../../lib/matchPhase';
-import type { MatchPrediction, MatchView } from '../../lib/types';
+import type { LiveMap, MatchPrediction, MatchView } from '../../lib/types';
 import MatchCard from './MatchCard';
 import MatchesToolbar, { type DayTab } from './MatchesToolbar';
 import ProgressCard from './ProgressCard';
@@ -22,6 +22,53 @@ function useNow(intervalMs = 30_000): number {
   return now;
 }
 
+const LIVE_WINDOW_BEFORE = 2 * 60_000;
+const LIVE_WINDOW_AFTER = 3 * 60 * 60_000;
+
+/**
+ * Trae el overlay de vivo del backend (/api/live) cada 60s, pero solo cuando hay
+ * algún partido en ventana de juego (kickoff -2m .. +3h). Best-effort: ante
+ * error mantiene el último estado y las cards caen al modo honesto si queda vacío.
+ */
+function useLiveScores(matches: MatchView[], now: number): LiveMap {
+  const [live, setLive] = useState<LiveMap>({});
+
+  // Booleano estable: el intervalo solo se recrea cuando la ventana se abre/cierra.
+  const hasWindow = useMemo(() => {
+    return matches.some((m) => {
+      if (m.status === 'FINISHED') return false;
+      const k = new Date(m.kickoffAt).getTime();
+      return now >= k - LIVE_WINDOW_BEFORE && now <= k + LIVE_WINDOW_AFTER;
+    });
+  }, [matches, now]);
+
+  useEffect(() => {
+    if (!hasWindow) {
+      setLive((prev) => (Object.keys(prev).length ? {} : prev));
+      return;
+    }
+    let cancelled = false;
+    async function poll() {
+      try {
+        const res = await fetch('/api/live');
+        if (!res.ok) return;
+        const data = (await res.json()) as LiveMap;
+        if (!cancelled) setLive(data);
+      } catch {
+        /* best-effort: dejamos el estado previo */
+      }
+    }
+    void poll();
+    const id = setInterval(() => void poll(), 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [hasWindow]);
+
+  return live;
+}
+
 interface Props {
   matches: MatchView[];
   focusMatchId?: string | null;
@@ -33,6 +80,7 @@ export default function MatchesView({
 }: Props) {
   const now = useNow();
   const [matches, setMatches] = useState(initialMatches);
+  const liveById = useLiveScores(matches, now);
   const [dayTab, setDayTab] = useState<DayTab>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [highlightId, setHighlightId] = useState<string | null>(null);
@@ -58,7 +106,10 @@ export default function MatchesView({
     return matches
       .filter((m) => {
         if (dayTab === 'today' && dayKey(m.kickoffAt) !== today) return false;
-        if (statusFilter !== 'all' && getPhase(m, now).key !== statusFilter)
+        if (
+          statusFilter !== 'all' &&
+          getPhase(m, now, liveById[m.id] ?? null).key !== statusFilter
+        )
           return false;
         return true;
       })
@@ -66,7 +117,7 @@ export default function MatchesView({
         (a, b) =>
           new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime(),
       );
-  }, [matches, dayTab, statusFilter, now, today]);
+  }, [matches, dayTab, statusFilter, now, today, liveById]);
 
   // El en vivo siempre arriba con su sección. En "Todos" los finalizados van al
   // fondo (banda colapsable); en "Hoy" quedan en su lugar cronológico.
@@ -77,7 +128,7 @@ export default function MatchesView({
       const upcoming: MatchView[] = [];
       const finished: MatchView[] = [];
       for (const m of filtered) {
-        const key = getPhase(m, now).key;
+        const key = getPhase(m, now, liveById[m.id] ?? null).key;
         if (key === 'live') live.push(m);
         else if (key === 'finished' && bucketFinished) finished.push(m);
         else upcoming.push(m);
@@ -92,7 +143,7 @@ export default function MatchesView({
         finishedGroups: groupByDay(finished, 'desc'),
         finishedPoints: points,
       };
-    }, [filtered, now, bucketFinished]);
+    }, [filtered, now, bucketFinished, liveById]);
 
   const finishedCount = finishedGroups.reduce(
     (n, [, arr]) => n + arr.length,
@@ -171,6 +222,7 @@ export default function MatchesView({
             <MatchCard
               match={m}
               now={now}
+              live={liveById[m.id] ?? null}
               onPredictionSaved={handlePredictionSaved}
             />
           </MatchCardSlot>
@@ -222,6 +274,7 @@ export default function MatchesView({
                     <MatchCard
                       match={m}
                       now={now}
+                      live={liveById[m.id] ?? null}
                       onPredictionSaved={handlePredictionSaved}
                     />
                   </MatchCardSlot>
@@ -243,6 +296,7 @@ export default function MatchesView({
                     <MatchCard
                       match={m}
                       now={now}
+                      live={liveById[m.id] ?? null}
                       onPredictionSaved={handlePredictionSaved}
                     />
                   </MatchCardSlot>
