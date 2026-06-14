@@ -448,7 +448,7 @@ export default function MatchCard({
             </span>
             <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-w3-text-muted transition-colors group-hover:text-w3-primary sm:text-xs">
               <Users className="h-3 w-3" />
-              <span className="hidden sm:inline">Quién acertó</span>
+              <span>Quién acertó</span>
               <ChevronDown
                 className={`h-3.5 w-3.5 transition-transform ${
                   expanded ? 'rotate-180' : ''
