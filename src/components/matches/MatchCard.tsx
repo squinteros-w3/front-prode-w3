@@ -552,7 +552,7 @@ function ResultsPanel({ results }: { results: MatchResults | null }) {
     <div className="space-y-3 text-left">
       <ResultGroup title="Resultado exacto · +3" entries={exact} tone="exact" />
       <ResultGroup
-        title="Acertaron el ganador · +1"
+        title="Acertaron el resultado · +1"
         entries={outcome}
         tone="outcome"
       />
