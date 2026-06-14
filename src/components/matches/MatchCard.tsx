@@ -5,13 +5,104 @@ import {
   ChevronUp,
   Lock,
   PencilLine,
+  Users,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { formatKickoff, formatKickoffCompact } from '../../lib/format';
 import { getPhase, stageLabel, type PhaseInfo } from '../../lib/matchPhase';
-import type { MatchPrediction, MatchView } from '../../lib/types';
+import type {
+  MatchPrediction,
+  MatchResultEntry,
+  MatchResults,
+  MatchView,
+} from '../../lib/types';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+type ResultsState = 'idle' | 'loading' | 'loaded' | 'error';
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+function ResultAvatar({
+  name,
+  avatarUrl,
+}: {
+  name: string;
+  avatarUrl: string | null;
+}) {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt=""
+        className="h-6 w-6 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-w3-primary-border bg-w3-primary-soft text-[10px] font-bold text-w3-primary">
+      {initials(name)}
+    </span>
+  );
+}
+
+function ResultGroup({
+  title,
+  entries,
+  tone,
+}: {
+  title: string;
+  entries: MatchResultEntry[];
+  tone: 'exact' | 'outcome' | 'miss';
+}) {
+  if (entries.length === 0) return null;
+
+  const titleClass =
+    tone === 'exact'
+      ? 'text-w3-primary'
+      : tone === 'outcome'
+        ? 'text-w3-text-secondary'
+        : 'text-w3-text-muted';
+
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className={`text-[11px] font-bold uppercase tracking-wide ${titleClass}`}>
+          {title}
+        </span>
+        <span className="rounded-full bg-w3-score-box px-1.5 py-0.5 text-[10px] font-semibold text-w3-text-muted">
+          {entries.length}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {entries.map((e) => (
+          <span
+            key={e.user.id}
+            className={`inline-flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2 ${
+              tone === 'exact'
+                ? 'border-w3-primary-border bg-w3-primary-soft'
+                : 'border-w3-border bg-w3-surface'
+            }`}
+          >
+            <ResultAvatar name={e.user.name} avatarUrl={e.user.avatarUrl} />
+            <span className="text-xs font-semibold text-w3-white">
+              {e.user.name}
+            </span>
+            <span className="text-[11px] font-medium tabular-nums text-w3-text-muted">
+              {e.homeScore}–{e.awayScore}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function StatusBadge({ phase }: { phase: PhaseInfo }) {
   return (
@@ -144,6 +235,10 @@ export default function MatchCard({
   const [state, setState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
 
+  const [expanded, setExpanded] = useState(false);
+  const [resultsState, setResultsState] = useState<ResultsState>('idle');
+  const [results, setResults] = useState<MatchResults | null>(null);
+
   useEffect(() => {
     const next = scoresFromPrediction(match.prediction);
     setHome(next.home);
@@ -213,6 +308,22 @@ export default function MatchCard({
     } catch (e) {
       setError((e as Error).message);
       setState('error');
+    }
+  }
+
+  async function toggleResults() {
+    const next = !expanded;
+    setExpanded(next);
+    if (!next || resultsState === 'loaded' || resultsState === 'loading') return;
+    setResultsState('loading');
+    try {
+      const res = await fetch(`/api/matches/${match.id}/results`);
+      if (!res.ok) throw new Error('No se pudo cargar');
+      const data = (await res.json()) as MatchResults;
+      setResults(data);
+      setResultsState('loaded');
+    } catch {
+      setResultsState('error');
     }
   }
 
@@ -304,7 +415,13 @@ export default function MatchCard({
       {/* Footer compacto en mobile */}
       <div className="mt-2 flex min-h-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-1.5 text-center sm:min-h-[34px] sm:pt-2">
         {finished && (
-          <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
+          <button
+            type="button"
+            onClick={toggleResults}
+            aria-expanded={expanded}
+            title="Ver quiénes acertaron"
+            className="group inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full px-1.5 py-0.5 transition-colors hover:bg-w3-surface-muted"
+          >
             <span className="text-xs font-medium text-w3-text-secondary sm:text-[13px]">
               <span className="sm:hidden">
                 Real {match.homeScore}–{match.awayScore}
@@ -329,7 +446,16 @@ export default function MatchCard({
                   ? '+1'
                   : '+0'}
             </span>
-          </div>
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-w3-text-muted transition-colors group-hover:text-w3-primary sm:text-xs">
+              <Users className="h-3 w-3" />
+              <span className="hidden sm:inline">Quién acertó</span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${
+                  expanded ? 'rotate-180' : ''
+                }`}
+              />
+            </span>
+          </button>
         )}
 
         {lockedWithPrediction && !finished && (
@@ -388,6 +514,49 @@ export default function MatchCard({
           </span>
         )}
       </div>
+
+      {finished && expanded && (
+        <div className="mt-3 border-t border-w3-border pt-3">
+          {resultsState === 'loading' && (
+            <p className="text-center text-xs text-w3-text-muted">
+              Cargando predicciones…
+            </p>
+          )}
+          {resultsState === 'error' && (
+            <p className="text-center text-xs text-red-400">
+              No se pudieron cargar las predicciones.
+            </p>
+          )}
+          {resultsState === 'loaded' && <ResultsPanel results={results} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResultsPanel({ results }: { results: MatchResults | null }) {
+  const predictions = results?.predictions ?? [];
+  if (predictions.length === 0) {
+    return (
+      <p className="text-center text-xs text-w3-text-muted">
+        Nadie cargó una predicción para este partido.
+      </p>
+    );
+  }
+
+  const exact = predictions.filter((p) => p.isExact);
+  const outcome = predictions.filter((p) => p.points === 1);
+  const missed = predictions.filter((p) => p.points === 0);
+
+  return (
+    <div className="space-y-3 text-left">
+      <ResultGroup title="Resultado exacto · +3" entries={exact} tone="exact" />
+      <ResultGroup
+        title="Acertaron el ganador · +1"
+        entries={outcome}
+        tone="outcome"
+      />
+      <ResultGroup title="No acertaron" entries={missed} tone="miss" />
     </div>
   );
 }

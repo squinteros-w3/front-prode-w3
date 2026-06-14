@@ -10,6 +10,7 @@ interface Props {
   allCount: number;
   statusFilter: StatusFilter;
   onStatusFilterChange: (filter: StatusFilter) => void;
+  finishedCount: number;
 }
 
 export default function MatchesToolbar({
@@ -19,6 +20,7 @@ export default function MatchesToolbar({
   allCount,
   statusFilter,
   onStatusFilterChange,
+  finishedCount,
 }: Props) {
   // Click en el chip activo lo apaga (vuelve a "todos").
   const finishedActive = statusFilter === 'finished';
@@ -51,6 +53,7 @@ export default function MatchesToolbar({
         <FilterChip
           label="Partidos Finalizados"
           shortLabel="Finalizados"
+          count={finishedCount}
           active={finishedActive}
           onClick={toggleFinished}
           className="flex-1 sm:flex-none"
@@ -75,12 +78,14 @@ export default function MatchesToolbar({
 function FilterChip({
   label,
   shortLabel,
+  count,
   active,
   onClick,
   className = '',
 }: {
   label: string;
   shortLabel?: string;
+  count?: number;
   active: boolean;
   onClick: () => void;
   className?: string;
@@ -104,6 +109,17 @@ function FilterChip({
         </>
       ) : (
         label
+      )}
+      {count != null && (
+        <span
+          className={`rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums ${
+            active
+              ? 'bg-w3-primary/20 text-w3-primary'
+              : 'bg-w3-score-box text-w3-text-muted'
+          }`}
+        >
+          {count}
+        </span>
       )}
       {active && <X className="h-3.5 w-3.5 shrink-0" />}
     </button>

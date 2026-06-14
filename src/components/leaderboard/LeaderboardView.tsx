@@ -1,3 +1,4 @@
+import { Check, Target, X } from 'lucide-react';
 import { useMemo } from 'react';
 import type { LeaderboardEntry } from '../../lib/types';
 
@@ -55,8 +56,18 @@ export default function LeaderboardView({ board, meId }: Props) {
         <div className="hidden items-center gap-3 border-b border-w3-border bg-w3-surface-muted px-5 py-3 text-xs font-semibold uppercase tracking-wide text-w3-text-muted sm:flex">
           <span className="w-12">#</span>
           <span className="min-w-0 flex-1">Jugador</span>
-          <span className="w-20 text-right">Exactos</span>
-          <span className="w-20 text-right">Aciertos</span>
+          <span className="flex w-28 items-center justify-end gap-1.5">
+            <Target className="h-3.5 w-3.5 text-w3-gold" />
+            Exactos (+3)
+          </span>
+          <span className="flex w-28 items-center justify-end gap-1.5">
+            <Check className="h-3.5 w-3.5 text-w3-primary" />
+            Aciertos (+1)
+          </span>
+          <span className="flex w-28 items-center justify-end gap-1.5">
+            <X className="h-3.5 w-3.5 text-w3-text-muted" />
+            Fallados (0)
+          </span>
           <span className="w-16 text-right">Puntos</span>
         </div>
 
@@ -115,10 +126,12 @@ function YourPosition({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-6 sm:justify-end sm:gap-8">
+        <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-7">
           <Stat label="Puesto" value={`${entry.rank}°`} />
           <Stat label="Puntos" value={entry.points} accent />
           <Stat label="Exactos" value={entry.exacts} />
+          <Stat label="Aciertos" value={entry.outcomes} />
+          <Stat label="Fallados" value={entry.misses} />
         </div>
       </div>
     </div>
@@ -233,6 +246,8 @@ function Podium({ podium }: { podium: LeaderboardEntry[] }) {
 }
 
 function Row({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+  // "Aciertos" = solo ganador/empate acertado (+1), ya excluye los exactos.
+  const outcomes = entry.outcomes;
   return (
     <div
       className={`flex items-center gap-3 px-4 py-3 sm:px-5 ${
@@ -262,16 +277,20 @@ function Row({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
             )}
           </div>
           <p className="mt-0.5 text-xs text-w3-text-muted sm:hidden">
-            {entry.exacts} exactos · {entry.hits} aciertos
+            {entry.exacts} exactos · {outcomes} aciertos · {entry.misses}{' '}
+            fallados
           </p>
         </div>
       </div>
 
-      <span className="hidden w-20 text-right text-sm font-semibold text-w3-text-secondary sm:block">
+      <span className="hidden w-28 text-right text-sm font-semibold text-w3-text-secondary sm:block">
         {entry.exacts}
       </span>
-      <span className="hidden w-20 text-right text-sm font-semibold text-w3-text-secondary sm:block">
-        {entry.hits}
+      <span className="hidden w-28 text-right text-sm font-semibold text-w3-text-secondary sm:block">
+        {outcomes}
+      </span>
+      <span className="hidden w-28 text-right text-sm font-semibold text-w3-text-muted sm:block">
+        {entry.misses}
       </span>
       <span className="w-12 shrink-0 text-right font-display text-base font-extrabold tabular-nums text-w3-primary sm:w-16">
         {entry.points}

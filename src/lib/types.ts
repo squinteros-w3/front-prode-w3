@@ -43,13 +43,30 @@ export interface MatchView {
   prediction: MatchPrediction | null;
 }
 
+export interface MatchResultEntry {
+  user: { id: string; name: string; avatarUrl: string | null };
+  homeScore: number;
+  awayScore: number;
+  points: number;
+  isExact: boolean;
+}
+
+export interface MatchResults {
+  available: boolean;
+  homeScore?: number;
+  awayScore?: number;
+  predictions?: MatchResultEntry[];
+}
+
 export interface LeaderboardEntry {
   rank: number;
   user: { id: string; name: string; avatarUrl: string | null };
   points: number;
   exacts: number;
-  /** Predicciones con puntos (exacto + ganador acertado). */
-  hits: number;
+  /** Solo ganador/empate acertado (+1). NO incluye los exactos. */
+  outcomes: number;
+  /** Partidos finalizados que no acertó (predijo mal o no predijo). */
+  misses: number;
   predictions: number;
 }
 

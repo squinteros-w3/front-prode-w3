@@ -47,6 +47,10 @@ export default function MatchesView({
 
   const today = todayKey();
   const todayCount = matches.filter((m) => dayKey(m.kickoffAt) === today).length;
+  // Total de finalizados (sin importar filtros), para el chip de la toolbar.
+  const finishedTotal = matches.filter(
+    (m) => getPhase(m, now).key === 'finished',
+  ).length;
 
   function handlePredictionSaved(matchId: string, prediction: MatchPrediction) {
     setMatches((prev) =>
@@ -201,6 +205,7 @@ export default function MatchesView({
         allCount={total}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
+        finishedCount={finishedTotal}
       />
 
       {filtered.length === 0 ? (
