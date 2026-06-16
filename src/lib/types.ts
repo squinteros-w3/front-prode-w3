@@ -58,6 +58,18 @@ export interface MatchResults {
   predictions?: MatchResultEntry[];
 }
 
+export interface LivePredictionEntry {
+  user: { id: string; name: string; avatarUrl: string | null };
+  homeScore: number;
+  awayScore: number;
+}
+
+export interface LivePredictions {
+  available: boolean;
+  total?: number;
+  predictions?: LivePredictionEntry[];
+}
+
 export interface LeaderboardEntry {
   rank: number;
   user: { id: string; name: string; avatarUrl: string | null };

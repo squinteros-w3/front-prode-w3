@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -7,10 +8,12 @@ import {
   PencilLine,
   Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { formatKickoff, formatKickoffCompact } from '../../lib/format';
 import { getPhase, stageLabel, type PhaseInfo } from '../../lib/matchPhase';
 import type {
+  LivePredictionEntry,
+  LivePredictions,
   MatchPrediction,
   MatchResultEntry,
   MatchResults,
@@ -239,6 +242,10 @@ export default function MatchCard({
   const [resultsState, setResultsState] = useState<ResultsState>('idle');
   const [results, setResults] = useState<MatchResults | null>(null);
 
+  const [liveExpanded, setLiveExpanded] = useState(false);
+  const [liveState, setLiveState] = useState<ResultsState>('idle');
+  const [livePreds, setLivePreds] = useState<LivePredictions | null>(null);
+
   useEffect(() => {
     const next = scoresFromPrediction(match.prediction);
     setHome(next.home);
@@ -250,6 +257,7 @@ export default function MatchCard({
   const editable = !match.locked && match.status === 'SCHEDULED';
   const finished = match.status === 'FINISHED';
   const phase = getPhase(match, now);
+  const isLive = phase.key === 'live';
 
   const hasSaved = savedHome !== '' && savedAway !== '';
   const bothFilled = home !== '' && away !== '';
@@ -324,6 +332,22 @@ export default function MatchCard({
       setResultsState('loaded');
     } catch {
       setResultsState('error');
+    }
+  }
+
+  async function toggleLive() {
+    const next = !liveExpanded;
+    setLiveExpanded(next);
+    if (!next || liveState === 'loaded' || liveState === 'loading') return;
+    setLiveState('loading');
+    try {
+      const res = await fetch(`/api/matches/${match.id}/live-predictions`);
+      if (!res.ok) throw new Error('No se pudo cargar');
+      const data = (await res.json()) as LivePredictions;
+      setLivePreds(data);
+      setLiveState('loaded');
+    } catch {
+      setLiveState('error');
     }
   }
 
@@ -458,7 +482,32 @@ export default function MatchCard({
           </button>
         )}
 
-        {lockedWithPrediction && !finished && (
+        {isLive && (
+          <button
+            type="button"
+            onClick={toggleLive}
+            aria-expanded={liveExpanded}
+            title="Ver qué pronosticaron y cómo viene la tendencia"
+            className="group inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full px-1.5 py-0.5 transition-colors hover:bg-w3-surface-muted"
+          >
+            {lockedWithPrediction && (
+              <span className="text-xs font-medium text-w3-text-secondary sm:text-[13px]">
+                Tu pronóstico: {savedHome}–{savedAway}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-w3-live transition-colors group-hover:opacity-80 sm:text-xs">
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span>Ver pronósticos</span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${
+                  liveExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </span>
+          </button>
+        )}
+
+        {lockedWithPrediction && !finished && !isLive && (
           <span className="inline-flex items-center gap-1 rounded-full border border-w3-border bg-w3-surface-muted px-2 py-0.5 text-xs font-semibold text-w3-text-secondary sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[13px]">
             <Lock className="h-3 w-3 text-w3-text-muted" />
             <span className="sm:hidden">Pronóstico cerrado</span>
@@ -530,6 +579,281 @@ export default function MatchCard({
           {resultsState === 'loaded' && <ResultsPanel results={results} />}
         </div>
       )}
+
+      {isLive && liveExpanded && (
+        <div className="mt-3 border-t border-w3-border pt-3">
+          {liveState === 'loading' && (
+            <p className="text-center text-xs text-w3-text-muted">
+              Cargando pronósticos…
+            </p>
+          )}
+          {liveState === 'error' && (
+            <p className="text-center text-xs text-red-400">
+              No se pudieron cargar los pronósticos.
+            </p>
+          )}
+          {liveState === 'loaded' && (
+            <LivePanel
+              data={livePreds}
+              homeName={match.homeTeam.name}
+              awayName={match.awayTeam.name}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type OutcomeTone = 'home' | 'draw' | 'away';
+
+const OUTCOME_COLOR: Record<OutcomeTone, string> = {
+  home: 'bg-w3-primary',
+  draw: 'bg-w3-text-muted',
+  away: 'bg-w3-warn',
+};
+
+function OutcomeRow({
+  label,
+  count,
+  total,
+  tone,
+  leading,
+}: {
+  label: string;
+  count: number;
+  total: number;
+  tone: OutcomeTone;
+  leading: boolean;
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-2.5 sm:gap-3">
+      <div className="flex w-24 shrink-0 items-center gap-1.5 sm:w-36">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${OUTCOME_COLOR[tone]}`} />
+        <span
+          className={`truncate text-xs font-semibold ${
+            leading ? 'text-w3-white' : 'text-w3-text-secondary'
+          }`}
+        >
+          {label}
+        </span>
+      </div>
+      <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-w3-score-box">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${OUTCOME_COLOR[tone]}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="w-16 shrink-0 whitespace-nowrap text-right text-xs font-bold tabular-nums text-w3-white">
+        {pct}%
+        <span className="ml-1 font-medium text-w3-text-muted">({count})</span>
+      </span>
+    </div>
+  );
+}
+
+function LiveGroup({
+  label,
+  tone,
+  entries,
+}: {
+  label: string;
+  tone: OutcomeTone;
+  entries: LivePredictionEntry[];
+}) {
+  if (entries.length === 0) return null;
+  const sorted = [...entries].sort(
+    (a, b) =>
+      b.homeScore - a.homeScore ||
+      a.awayScore - b.awayScore ||
+      a.user.name.localeCompare(b.user.name),
+  );
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${OUTCOME_COLOR[tone]}`} />
+        <span className="text-[11px] font-bold uppercase tracking-wide text-w3-text-secondary">
+          {label}
+        </span>
+        <span className="rounded-full bg-w3-score-box px-1.5 py-0.5 text-[10px] font-semibold text-w3-text-muted">
+          {entries.length}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {sorted.map((e) => (
+          <span
+            key={e.user.id}
+            className="inline-flex items-center gap-1.5 rounded-full border border-w3-border bg-w3-surface py-0.5 pl-0.5 pr-2.5"
+          >
+            <ResultAvatar name={e.user.name} avatarUrl={e.user.avatarUrl} />
+            <span className="text-xs font-semibold text-w3-white">
+              {e.user.name}
+            </span>
+            <span className="rounded bg-w3-score-box px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-w3-text-secondary">
+              {e.homeScore}–{e.awayScore}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScorelineRow({
+  score,
+  count,
+  total,
+  max,
+  rank,
+}: {
+  score: string;
+  count: number;
+  total: number;
+  max: number;
+  rank: number;
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const barPct = max > 0 ? Math.round((count / max) * 100) : 0;
+  return (
+    <div className="flex items-center gap-2.5 sm:gap-3">
+      <span
+        className={`grid w-14 shrink-0 place-items-center rounded-lg border py-1 text-sm font-bold tabular-nums ${
+          rank === 0
+            ? 'border-w3-primary-border bg-w3-primary-soft text-w3-primary'
+            : 'border-w3-border bg-w3-score-box text-w3-white'
+        }`}
+      >
+        {score}
+      </span>
+      <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-w3-score-box">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${
+            rank === 0 ? 'bg-w3-primary' : 'bg-w3-primary/45'
+          }`}
+          style={{ width: `${barPct}%` }}
+        />
+      </div>
+      <span className="w-16 shrink-0 whitespace-nowrap text-right text-xs font-bold tabular-nums text-w3-white">
+        {pct}%
+        <span className="ml-1 font-medium text-w3-text-muted">({count})</span>
+      </span>
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-w3-text-secondary">
+      {children}
+    </div>
+  );
+}
+
+function LivePanel({
+  data,
+  homeName,
+  awayName,
+}: {
+  data: LivePredictions | null;
+  homeName: string;
+  awayName: string;
+}) {
+  const predictions = data?.predictions ?? [];
+  if (predictions.length === 0) {
+    return (
+      <p className="text-center text-xs text-w3-text-muted">
+        Todavía nadie había cargado una predicción para este partido.
+      </p>
+    );
+  }
+
+  const total = predictions.length;
+  const homeWin = predictions.filter((p) => p.homeScore > p.awayScore);
+  const draw = predictions.filter((p) => p.homeScore === p.awayScore);
+  const awayWin = predictions.filter((p) => p.homeScore < p.awayScore);
+
+  const outcomes = [
+    { tone: 'home' as const, label: `Gana ${homeName}`, list: homeWin },
+    { tone: 'draw' as const, label: 'Empate', list: draw },
+    { tone: 'away' as const, label: `Gana ${awayName}`, list: awayWin },
+  ];
+  const leadingCount = Math.max(homeWin.length, draw.length, awayWin.length);
+  const leader = outcomes.find((o) => o.list.length === leadingCount)!;
+  const leaderPct = Math.round((leadingCount / total) * 100);
+
+  const counts = new Map<string, number>();
+  for (const p of predictions) {
+    const key = `${p.homeScore}–${p.awayScore}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const topScores = [...counts.entries()].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  );
+  const maxScore = topScores[0]?.[1] ?? 0;
+
+  return (
+    <div className="space-y-4 text-left">
+      {/* Resumen */}
+      <p className="text-xs text-w3-text-secondary sm:text-[13px]">
+        {total} {total === 1 ? 'persona pronosticó' : 'personas pronosticaron'}{' '}
+        este partido.{' '}
+        <span className="font-semibold text-w3-white">
+          {leader.label} ({leaderPct}%)
+        </span>{' '}
+        es lo más elegido.
+      </p>
+
+      {/* Tendencia */}
+      <div>
+        <SectionTitle>Tendencia</SectionTitle>
+        <div className="space-y-2">
+          {outcomes.map((o) => (
+            <OutcomeRow
+              key={o.tone}
+              label={o.label}
+              count={o.list.length}
+              total={total}
+              tone={o.tone}
+              leading={o.list.length === leadingCount}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Marcadores más elegidos */}
+      {topScores.length > 0 && (
+        <div>
+          <SectionTitle>Marcadores más elegidos</SectionTitle>
+          <div className="space-y-1.5">
+            {topScores.slice(0, 5).map(([score, n], i) => (
+              <ScorelineRow
+                key={score}
+                score={score}
+                count={n}
+                total={total}
+                max={maxScore}
+                rank={i}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quién puso qué */}
+      <div>
+        <SectionTitle>Quién puso qué</SectionTitle>
+        <div className="space-y-3">
+          {outcomes.map((o) => (
+            <LiveGroup
+              key={o.tone}
+              label={o.label}
+              tone={o.tone}
+              entries={o.list}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
