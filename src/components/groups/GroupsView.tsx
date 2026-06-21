@@ -9,7 +9,7 @@ import type {
   ThirdPlaceRanking,
 } from '../../lib/types';
 import GroupMatchList from './GroupMatchList';
-import GroupSelector from './GroupSelector';
+import GroupSelector, { THIRDS_KEY } from './GroupSelector';
 import GroupStandingsTable, {
   GroupStandingsOverviewCard,
 } from './GroupStandingsTable';
@@ -77,7 +77,16 @@ export default function GroupsView({
   return (
     <div className="space-y-6">
       <div>
-        {selected ? (
+        {selected === THIRDS_KEY ? (
+          <>
+            <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-[34px]">
+              Mejores terceros
+            </h1>
+            <p className="mt-1.5 text-sm text-w3-text-secondary sm:text-[15px]">
+              Ranking de los terceros de cada grupo. Clasifican los 8 mejores.
+            </p>
+          </>
+        ) : selected ? (
           <>
             <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-[34px]">
               Grupo {selected}
@@ -115,6 +124,8 @@ export default function GroupsView({
         <p className="rounded-w3-card border border-w3-border bg-w3-surface p-6 text-center text-w3-text-secondary">
           Todavía no hay grupos cargados. Sincronizá desde el panel de Admin.
         </p>
+      ) : selected === THIRDS_KEY ? (
+        <ThirdPlaceTable ranking={thirdPlace} />
       ) : selectedGroup ? (
         <div className="flex flex-col gap-5 lg:flex-row">
           <div className="w-full shrink-0 lg:w-[440px]">
@@ -132,24 +143,21 @@ export default function GroupsView({
           </div>
         </div>
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {groups.map((g) => (
-              <button
-                key={g.group}
-                type="button"
-                onClick={() => handleSelect(g.group)}
-                className="group block h-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-w3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-w3-page-bg"
-              >
-                <GroupStandingsOverviewCard
-                  group={g.group}
-                  standings={g.standings}
-                />
-              </button>
-            ))}
-          </div>
-          {anyPlayed && <ThirdPlaceTable ranking={thirdPlace} />}
-        </>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {groups.map((g) => (
+            <button
+              key={g.group}
+              type="button"
+              onClick={() => handleSelect(g.group)}
+              className="group block h-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-w3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-w3-page-bg"
+            >
+              <GroupStandingsOverviewCard
+                group={g.group}
+                standings={g.standings}
+              />
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

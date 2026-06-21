@@ -1,5 +1,6 @@
 ---
 import GroupsView from '../components/groups/GroupsView.tsx';
+import { THIRDS_KEY } from '../components/groups/GroupSelector.tsx';
 import Layout from '../layouts/Layout.astro';
 import { getGroups, getMatches, getThirdPlace } from '../lib/api';
 
@@ -12,7 +13,7 @@ const [groups, matches, thirdPlace] = await Promise.all([
 ]);
 
 const grupoParam = Astro.url.searchParams.get('grupo');
-const validGroups = new Set(groups.map((g) => g.group));
+const validGroups = new Set([...groups.map((g) => g.group), THIRDS_KEY]);
 const initialGroup =
   grupoParam && validGroups.has(grupoParam) ? grupoParam : null;
 ---
