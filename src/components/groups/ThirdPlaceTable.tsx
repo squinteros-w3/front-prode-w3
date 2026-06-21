@@ -5,7 +5,7 @@ interface Props {
 }
 
 /**
- * Ranking de los terceros de cada grupo. Los 8 mejores clasifican a 32avos.
+ * Ranking de los terceros de cada grupo. Los 8 mejores clasifican a 16avos.
  * Se actualiza partido a partido junto con las tablas de grupo.
  */
 export default function ThirdPlaceTable({ ranking }: Props) {
@@ -24,7 +24,7 @@ export default function ThirdPlaceTable({ ranking }: Props) {
         </span>
       </div>
       <p className="mb-3.5 text-xs text-w3-text-secondary">
-        Clasifican los 8 mejores a 32avos de final.
+        Clasifican los 8 mejores a 16avos de final.
       </p>
 
       {/* Header */}

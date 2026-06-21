@@ -68,7 +68,7 @@ export function getPhase(match: MatchView, now: number): PhaseInfo {
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  r32: '32avos',
+  r32: '16avos',
   r16: 'Octavos',
   qf: 'Cuartos',
   sf: 'Semifinal',
