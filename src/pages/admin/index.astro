@@ -1,13 +1,13 @@
 ---
 import AdminPanel from '../../components/AdminPanel.tsx';
 import Layout from '../../layouts/Layout.astro';
-import { getAdminUsers, getMatches } from '../../lib/api';
+import { getAdminMatches, getAdminUsers } from '../../lib/api';
 
 export const prerender = false;
 
 const token = Astro.locals.token;
 const [matches, users] = await Promise.all([
-  getMatches(token),
+  getAdminMatches(token),
   getAdminUsers(token),
 ]);
 ---

@@ -1,9 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import TeamRow from '../components/TeamRow.astro';
-import { getMatches } from '../lib/api';
+import { getBracket } from '../lib/api';
 import { formatKickoff } from '../lib/format';
-import type { MatchView } from '../lib/types';
+import type { BracketMatch, BracketSlot } from '../lib/types';
 
 export const prerender = false;
 
@@ -17,35 +17,42 @@ const STAGE_LABELS: Record<string, string> = {
   final: 'Final',
 };
 
-const all = await getMatches(Astro.locals.token);
-const knockout = all.filter((m) => m.stage !== 'group');
+const bracket = await getBracket(Astro.locals.token);
 
 const byStage = STAGE_ORDER.map((stage) => ({
   stage,
   label: STAGE_LABELS[stage] ?? stage,
-  matches: knockout
+  matches: bracket
     .filter((m) => m.stage === stage)
-    .sort(
-      (a, b) =>
-        new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime(),
-    ),
+    .sort((a, b) => {
+      // Sin fecha aún (cruce no programado): mantené el orden del cuadro.
+      if (!a.kickoffAt || !b.kickoffAt) {
+        return Number(a.externalId) - Number(b.externalId);
+      }
+      return new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime();
+    }),
 })).filter((s) => s.matches.length > 0);
 
-function winner(m: MatchView): 'home' | 'away' | null {
-  if (m.status !== 'FINISHED' || m.homeScore === null || m.awayScore === null)
+function winner(m: BracketMatch): 'home' | 'away' | null {
+  if (m.status !== 'FINISHED' || m.home.score === null || m.away.score === null)
     return null;
-  if (m.homeScore > m.awayScore) return 'home';
-  if (m.awayScore > m.homeScore) return 'away';
+  if (m.home.score > m.away.score) return 'home';
+  if (m.away.score > m.home.score) return 'away';
   // Empate en los 90'/prórroga: se define por penales (los carga el admin).
-  if (m.homePenalties !== null && m.awayPenalties !== null) {
-    if (m.homePenalties > m.awayPenalties) return 'home';
-    if (m.awayPenalties > m.homePenalties) return 'away';
+  if (m.home.penalties !== null && m.away.penalties !== null) {
+    if (m.home.penalties > m.away.penalties) return 'home';
+    if (m.away.penalties > m.home.penalties) return 'away';
   }
   return null;
 }
 
-function wentToPens(m: MatchView): boolean {
-  return m.homePenalties !== null && m.awayPenalties !== null;
+function wentToPens(m: BracketMatch): boolean {
+  return m.home.penalties !== null && m.away.penalties !== null;
+}
+
+// Nombre a mostrar: el equipo si ya está definido, si no la etiqueta del cruce.
+function slotName(slot: BracketSlot): string {
+  return slot.team?.name ?? slot.label ?? 'A definir';
 }
 ---
 
@@ -55,7 +62,8 @@ function wentToPens(m: MatchView): boolean {
       Fase eliminatoria
     </h1>
     <p class="mt-1.5 text-sm text-w3-text-secondary sm:text-[15px]">
-      Las llaves se completan automáticamente a medida que avanza el Mundial.
+      El cuadro completo desde 32avos. Los equipos se van completando a medida
+      que se definen los grupos y avanzan las llaves.
     </p>
   </div>
 
@@ -63,10 +71,10 @@ function wentToPens(m: MatchView): boolean {
     byStage.length === 0 ? (
       <div class="rounded-w3-card border border-w3-border bg-w3-surface p-8 text-center">
         <p class="text-4xl">🏆</p>
-        <p class="mt-3 font-semibold">La eliminatoria todavía no arrancó</p>
+        <p class="mt-3 font-semibold">El cuadro todavía no está disponible</p>
         <p class="mx-auto mt-1 max-w-sm text-sm text-w3-text-secondary">
-          Cuando terminen los grupos y se definan los cruces, vas a ver acá las
-          llaves con sus resultados.
+          En cuanto se publique el fixture de la eliminatoria vas a ver acá
+          todos los cruces.
         </p>
       </div>
     ) : (
@@ -83,34 +91,43 @@ function wentToPens(m: MatchView): boolean {
               {s.matches.map((m) => {
                 const win = winner(m);
                 const finished = m.status === 'FINISHED';
+                const defined = m.home.team !== null && m.away.team !== null;
                 return (
                   <div class="rounded-2xl border border-w3-border bg-w3-surface p-4 sm:rounded-w3-card">
                     <div class="mb-2 flex items-center justify-between text-xs text-w3-text-muted">
-                      <span>{formatKickoff(m.kickoffAt)}</span>
+                      <span>
+                        {m.kickoffAt ? formatKickoff(m.kickoffAt) : 'Fecha por confirmar'}
+                      </span>
                       <span
                         class:list={[
                           'rounded-full px-2 py-0.5 font-medium',
                           finished
                             ? 'bg-w3-score-box text-w3-text-secondary'
-                            : 'bg-w3-primary-soft text-w3-primary',
+                            : defined
+                              ? 'bg-w3-primary-soft text-w3-primary'
+                              : 'bg-w3-score-box text-w3-text-muted',
                         ]}
                       >
-                        {finished ? 'Finalizado' : 'Por jugarse'}
+                        {finished
+                          ? 'Finalizado'
+                          : defined
+                            ? 'Por jugarse'
+                            : 'A definir'}
                       </span>
                     </div>
 
                     <TeamRow
-                      name={m.homeTeam.name}
-                      flagUrl={m.homeTeam.flagUrl}
-                      score={m.homeScore}
+                      name={slotName(m.home)}
+                      flagUrl={m.home.team?.flagUrl ?? null}
+                      score={m.home.score}
                       finished={finished}
                       isWinner={win === 'home'}
                     />
                     <div class="my-1 h-px bg-w3-border" />
                     <TeamRow
-                      name={m.awayTeam.name}
-                      flagUrl={m.awayTeam.flagUrl}
-                      score={m.awayScore}
+                      name={slotName(m.away)}
+                      flagUrl={m.away.team?.flagUrl ?? null}
+                      score={m.away.score}
                       finished={finished}
                       isWinner={win === 'away'}
                     />
@@ -121,7 +138,7 @@ function wentToPens(m: MatchView): boolean {
                         <span>
                           Definido por penales{' '}
                           <strong class="text-w3-white">
-                            {m.homePenalties}–{m.awayPenalties}
+                            {m.home.penalties}–{m.away.penalties}
                           </strong>
                         </span>
                       </div>

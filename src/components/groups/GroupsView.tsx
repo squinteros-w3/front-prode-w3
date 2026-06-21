@@ -3,22 +3,29 @@ import {
   buildSimulatedRows,
   simulateGroupStandings,
 } from '../../lib/simulateStandings';
-import type { GroupStanding, MatchView } from '../../lib/types';
+import type {
+  GroupStanding,
+  MatchView,
+  ThirdPlaceRanking,
+} from '../../lib/types';
 import GroupMatchList from './GroupMatchList';
 import GroupSelector from './GroupSelector';
 import GroupStandingsTable, {
   GroupStandingsOverviewCard,
 } from './GroupStandingsTable';
+import ThirdPlaceTable from './ThirdPlaceTable';
 
 interface Props {
   groups: GroupStanding[];
   matches: MatchView[];
+  thirdPlace: ThirdPlaceRanking;
   initialGroup: string | null;
 }
 
 export default function GroupsView({
   groups,
   matches,
+  thirdPlace,
   initialGroup,
 }: Props) {
   const groupLetters = groups.map((g) => g.group);
@@ -125,21 +132,24 @@ export default function GroupsView({
           </div>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {groups.map((g) => (
-            <button
-              key={g.group}
-              type="button"
-              onClick={() => handleSelect(g.group)}
-              className="group block h-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-w3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-w3-page-bg"
-            >
-              <GroupStandingsOverviewCard
-                group={g.group}
-                standings={g.standings}
-              />
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {groups.map((g) => (
+              <button
+                key={g.group}
+                type="button"
+                onClick={() => handleSelect(g.group)}
+                className="group block h-full cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-w3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-w3-page-bg"
+              >
+                <GroupStandingsOverviewCard
+                  group={g.group}
+                  standings={g.standings}
+                />
+              </button>
+            ))}
+          </div>
+          {anyPlayed && <ThirdPlaceTable ranking={thirdPlace} />}
+        </>
       )}
     </div>
   );

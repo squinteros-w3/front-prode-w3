@@ -1,9 +1,12 @@
 import type {
+  AdminMatchView,
   AdminUser,
   AppUser,
+  BracketMatch,
   GroupStanding,
   LeaderboardEntry,
   MatchView,
+  ThirdPlaceRanking,
   UserStats,
 } from './types';
 
@@ -48,14 +51,25 @@ export const getMe = (token: string | null) =>
 export const getMatches = (token: string | null) =>
   getJson<MatchView[]>('/matches', token).then((r) => r ?? []);
 
+export const getBracket = (token: string | null) =>
+  getJson<BracketMatch[]>('/matches/bracket', token).then((r) => r ?? []);
+
 export const getLeaderboard = (token: string | null) =>
   getJson<LeaderboardEntry[]>('/leaderboard', token).then((r) => r ?? []);
 
 export const getGroups = (token: string | null) =>
   getJson<GroupStanding[]>('/groups/standings', token).then((r) => r ?? []);
 
+export const getThirdPlace = (token: string | null) =>
+  getJson<ThirdPlaceRanking>('/groups/third-place', token).then(
+    (r) => r ?? { complete: false, rows: [] },
+  );
+
 export const getStats = (token: string | null) =>
   getJson<UserStats>('/stats/me', token);
 
 export const getAdminUsers = (token: string | null) =>
   getJson<AdminUser[]>('/admin/users', token).then((r) => r ?? []);
+
+export const getAdminMatches = (token: string | null) =>
+  getJson<AdminMatchView[]>('/admin/matches', token).then((r) => r ?? []);

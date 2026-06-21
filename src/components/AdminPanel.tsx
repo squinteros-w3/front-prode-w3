@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { formatKickoff } from '../lib/format';
-import type { AdminUser, MatchView } from '../lib/types';
+import type { AdminMatchView, AdminUser } from '../lib/types';
 
 type Tab = 'sync' | 'resultados' | 'usuarios';
 
@@ -8,7 +8,7 @@ export default function AdminPanel({
   matches,
   users,
 }: {
-  matches: MatchView[];
+  matches: AdminMatchView[];
   users: AdminUser[];
 }) {
   const [tab, setTab] = useState<Tab>('sync');
@@ -97,7 +97,7 @@ function SyncTab() {
   );
 }
 
-function ResultsTab({ matches }: { matches: MatchView[] }) {
+function ResultsTab({ matches }: { matches: AdminMatchView[] }) {
   const [q, setQ] = useState('');
   const filtered = matches.filter((m) =>
     `${m.homeTeam.name} ${m.awayTeam.name}`
@@ -125,7 +125,7 @@ function ResultsTab({ matches }: { matches: MatchView[] }) {
   );
 }
 
-function ResultRow({ match }: { match: MatchView }) {
+function ResultRow({ match }: { match: AdminMatchView }) {
   const [home, setHome] = useState(
     match.homeScore !== null ? String(match.homeScore) : '',
   );
@@ -145,6 +145,19 @@ function ResultRow({ match }: { match: MatchView }) {
   const isKnockout = match.stage !== 'group';
   // Mostrar penales solo en eliminación y cuando el resultado cargado es empate.
   const showPens = isKnockout && home !== '' && away !== '' && home === away;
+
+  // Trazabilidad: origen del resultado y aviso si la API reportó algo distinto.
+  const apiHasResult = match.apiHomeScore !== null && match.apiAwayScore !== null;
+  const mismatch =
+    match.manualResult &&
+    apiHasResult &&
+    (match.apiHomeScore !== match.homeScore ||
+      match.apiAwayScore !== match.awayScore);
+  const origin: 'manual' | 'api' | null = match.manualResult
+    ? 'manual'
+    : match.status === 'FINISHED'
+      ? 'api'
+      : null;
 
   async function save() {
     const h = Number(home);
@@ -177,8 +190,20 @@ function ResultRow({ match }: { match: MatchView }) {
     <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">
-            {match.homeTeam.name} vs {match.awayTeam.name}
+          <p className="flex items-center gap-2 truncate text-sm font-medium">
+            <span className="truncate">
+              {match.homeTeam.name} vs {match.awayTeam.name}
+            </span>
+            {origin === 'manual' && (
+              <span className="shrink-0 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                Manual
+              </span>
+            )}
+            {origin === 'api' && (
+              <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/50">
+                API
+              </span>
+            )}
           </p>
           <p className="text-xs text-white/40">
             {formatKickoff(match.kickoffAt)} ·{' '}
@@ -221,6 +246,23 @@ function ResultRow({ match }: { match: MatchView }) {
                 : 'Guardar'}
         </button>
       </div>
+
+      {mismatch && (
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-2 text-xs text-amber-200">
+          <span aria-hidden="true">⚠️</span>
+          <span>
+            La API reportó{' '}
+            <strong>
+              {match.apiHomeScore}–{match.apiAwayScore}
+            </strong>
+            , distinto al cargado a mano{' '}
+            <strong>
+              {match.homeScore}–{match.awayScore}
+            </strong>
+            . Revisá cuál es el correcto.
+          </span>
+        </div>
+      )}
 
       {showPens && (
         <div className="mt-2 flex items-center gap-2 border-t border-white/5 pt-2 text-xs text-white/50">

@@ -118,6 +118,60 @@ export interface GroupStanding {
   standings: StandingRow[];
 }
 
+export interface ThirdPlaceRow extends StandingRow {
+  group: string;
+  /** Posición entre los 12 terceros (1 = mejor). */
+  rank: number;
+  /** Cae dentro de los 8 que clasifican (provisorio hasta cerrar la fase). */
+  qualified: boolean;
+}
+
+export interface ThirdPlaceRanking {
+  /** True cuando los 12 grupos terminaron de jugar (ranking definitivo). */
+  complete: boolean;
+  rows: ThirdPlaceRow[];
+}
+
+export interface BracketSlot {
+  /** Equipo ya definido; null si el cruce todavía no tiene equipo. */
+  team: { id: string; name: string; code: string | null; flagUrl: string | null } | null;
+  /** Etiqueta del cruce ("Ganador Grupo A", "3º (...)", etc.) cuando no hay equipo. */
+  label: string | null;
+  score: number | null;
+  penalties: number | null;
+}
+
+export interface BracketMatch {
+  externalId: string;
+  stage: string;
+  /** ISO UTC; null mientras el partido no esté programado en la DB. */
+  kickoffAt: string | null;
+  status: MatchStatus;
+  home: BracketSlot;
+  away: BracketSlot;
+}
+
+export interface AdminMatchView {
+  id: string;
+  externalId: string;
+  stage: string;
+  group: string | null;
+  matchday: number | null;
+  kickoffAt: string;
+  status: MatchStatus;
+  homeScore: number | null;
+  awayScore: number | null;
+  homePenalties: number | null;
+  awayPenalties: number | null;
+  /** Resultado cargado a mano por el admin (no lo pisa el sync). */
+  manualResult: boolean;
+  /** Último marcador finalizado que reportó la API (null si aún no lo da por terminado). */
+  apiHomeScore: number | null;
+  apiAwayScore: number | null;
+  homeTeam: TeamLite;
+  awayTeam: TeamLite;
+}
+
 export interface AdminUser {
   id: string;
   email: string;

@@ -1,13 +1,14 @@
 ---
 import GroupsView from '../components/groups/GroupsView.tsx';
 import Layout from '../layouts/Layout.astro';
-import { getGroups, getMatches } from '../lib/api';
+import { getGroups, getMatches, getThirdPlace } from '../lib/api';
 
 export const prerender = false;
 
-const [groups, matches] = await Promise.all([
+const [groups, matches, thirdPlace] = await Promise.all([
   getGroups(Astro.locals.token),
   getMatches(Astro.locals.token),
+  getThirdPlace(Astro.locals.token),
 ]);
 
 const grupoParam = Astro.url.searchParams.get('grupo');
@@ -21,6 +22,7 @@ const initialGroup =
     client:load
     groups={groups}
     matches={matches}
+    thirdPlace={thirdPlace}
     initialGroup={initialGroup}
   />
 </Layout>
