@@ -1,0 +1,146 @@
+---
+import { ROUND_STAGES, STAGE_SHORT, groupByStage } from '../../lib/bracket';
+import type { BracketMatch } from '../../lib/types';
+import BracketCard from './BracketCard.astro';
+
+interface Props {
+  bracket: BracketMatch[];
+}
+const { bracket } = Astro.props;
+
+const groups = groupByStage(bracket);
+const byStage = new Map(groups.map((g) => [g.stage, g]));
+
+// Geometría del cuadro (replicada del diseño Pencil): cards de 190×66, columnas
+// cada 244px. El centro vertical de cada card sigue center(r,i)=39·2^r·(2i+1),
+// de modo que el cruce de la ronda siguiente cae justo en el medio de su par.
+const CARD_W = 190;
+const CARD_H = 66;
+const COL_PITCH = 244;
+
+const colX = (r: number) => r * COL_PITCH;
+const centerY = (r: number, i: number) => 39 * 2 ** r * (2 * i + 1);
+const topY = (r: number, i: number) => centerY(r, i) - CARD_H / 2;
+
+// Rondas presentes que forman las columnas (la final incluida; el 3er puesto va aparte).
+const rounds = ROUND_STAGES.map((stage, r) => ({
+  stage,
+  r,
+  matches: byStage.get(stage)?.matches ?? [],
+})).filter((x) => x.matches.length > 0);
+
+const finalRound = rounds.find((x) => x.stage === 'final');
+const third = byStage.get('third')?.matches[0] ?? null;
+
+const finalX = finalRound ? colX(finalRound.r) : 0;
+const finalCard = finalRound?.matches[0] ?? null;
+const finalTop = finalRound ? topY(finalRound.r, 0) : 0;
+const thirdTop = finalTop + 110;
+
+// Conectores entre columnas (uno por par que alimenta a la ronda siguiente).
+interface Line {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+const connectors: Line[] = [];
+for (let k = 0; k < rounds.length - 1; k++) {
+  const { r, matches } = rounds[k];
+  const next = rounds[k + 1];
+  const rightEdge = colX(r) + CARD_W;
+  const midX = rightEdge + (COL_PITCH - CARD_W) / 2;
+  const nextLeft = colX(next.r);
+  const pairs = Math.floor(matches.length / 2);
+  for (let p = 0; p < pairs; p++) {
+    if (!next.matches[p]) continue;
+    const yTop = centerY(r, 2 * p);
+    const yBot = centerY(r, 2 * p + 1);
+    const yMid = (yTop + yBot) / 2;
+    connectors.push({ x: rightEdge, y: yTop, w: midX - rightEdge, h: 1 });
+    connectors.push({ x: rightEdge, y: yBot, w: midX - rightEdge, h: 1 });
+    connectors.push({ x: midX, y: yTop, w: 1, h: yBot - yTop });
+    connectors.push({ x: midX, y: yMid, w: nextLeft - midX, h: 1 });
+  }
+}
+
+let maxBottom = thirdTop + CARD_H;
+for (const { r, matches } of rounds) {
+  maxBottom = Math.max(maxBottom, topY(r, matches.length - 1) + CARD_H);
+}
+const canvasW = finalRound ? finalX + CARD_W : 0;
+---
+
+<div class="overflow-x-auto pb-2">
+  <!-- Labels de ronda -->
+  <div class="flex" style={`width:${canvasW}px`}>
+    {
+      rounds.map(({ stage }, idx) => (
+        <div
+          class="flex flex-col items-center"
+          style={`width:${CARD_W}px${idx < rounds.length - 1 ? `;margin-right:${COL_PITCH - CARD_W}px` : ''}`}
+        >
+          <span class="font-display text-[13px] font-bold uppercase tracking-wide text-w3-primary">
+            {STAGE_SHORT[stage]}
+          </span>
+        </div>
+      ))
+    }
+  </div>
+
+  <!-- Lienzo del cuadro -->
+  <div class="relative mt-3" style={`width:${canvasW}px;height:${maxBottom}px`}>
+    {
+      connectors.map((l) => (
+        <div
+          class="absolute bg-w3-border-strong"
+          style={`left:${l.x}px;top:${l.y}px;width:${l.w}px;height:${l.h}px`}
+        />
+      ))
+    }
+
+    {
+      rounds.flatMap(({ r, matches }) =>
+        matches.map((m, i) => (
+          <BracketCard
+            match={m}
+            x={colX(r)}
+            y={topY(r, i)}
+            width={CARD_W}
+            height={CARD_H}
+          />
+        )),
+      )
+    }
+
+    {
+      finalCard && (
+        <span
+          class="absolute font-display text-[11px] font-bold tracking-wide text-w3-gold"
+          style={`left:${finalX + 4}px;top:${finalTop - 20}px`}
+        >
+          FINAL
+        </span>
+      )
+    }
+    {
+      third && (
+        <Fragment>
+          <span
+            class="absolute font-display text-[11px] font-bold tracking-wide text-w3-bronze"
+            style={`left:${finalX + 4}px;top:${thirdTop - 20}px`}
+          >
+            3ER PUESTO
+          </span>
+          <BracketCard
+            match={third}
+            x={finalX}
+            y={thirdTop}
+            width={CARD_W}
+            height={CARD_H}
+          />
+        </Fragment>
+      )
+    }
+  </div>
+</div>

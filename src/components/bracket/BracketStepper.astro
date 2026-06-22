@@ -1,0 +1,265 @@
+---
+import { formatKickoff } from '../../lib/format';
+import {
+  ROUND_STAGES,
+  STAGE_LABELS,
+  STAGE_SHORT,
+  groupByStage,
+  isDefined,
+  roundProgress,
+  slotName,
+  wentToPens,
+  winner,
+} from '../../lib/bracket';
+import type { BracketMatch } from '../../lib/types';
+
+interface Props {
+  bracket: BracketMatch[];
+}
+const { bracket } = Astro.props;
+
+const groups = groupByStage(bracket);
+const byStage = new Map(groups.map((g) => [g.stage, g]));
+
+// Pasos = rondas presentes. El 3er puesto se muestra dentro del paso Final.
+const steps = ROUND_STAGES.map((stage) => byStage.get(stage)).filter(
+  (g): g is NonNullable<typeof g> => !!g,
+);
+const thirdMatches = byStage.get('third')?.matches ?? [];
+
+// Cruces que van en cada paso (la final suma el 3er puesto).
+function stepMatches(stage: string): { match: BracketMatch; caption?: string }[] {
+  const base = (byStage.get(stage)?.matches ?? []).map((match) => ({ match }));
+  if (stage === 'final') {
+    return base.concat(
+      thirdMatches.map((match) => ({ match, caption: '3er puesto' })),
+    );
+  }
+  return base;
+}
+
+// Paso activo por defecto: la primera ronda con algún cruce sin jugar.
+const defaultStage =
+  steps.find((s) => roundProgress(s.matches).played < s.matches.length)?.stage ??
+  steps[0]?.stage ??
+  '';
+
+function statusChip(m: BracketMatch) {
+  if (m.status === 'FINISHED')
+    return { label: 'Finalizado', cls: 'bg-w3-score-box text-w3-text-secondary' };
+  if (isDefined(m))
+    return { label: 'Por jugarse', cls: 'bg-w3-primary-soft text-w3-primary' };
+  return { label: 'A definir', cls: 'bg-w3-score-box text-w3-text-muted' };
+}
+
+function teamData(m: BracketMatch, side: 'home' | 'away') {
+  const slot = m[side];
+  const win = winner(m);
+  return {
+    name: slotName(slot),
+    flagUrl: slot.team?.flagUrl ?? null,
+    isTeam: slot.team !== null,
+    isWinner: win === side,
+    score: m.status === 'FINISHED' && slot.score !== null ? slot.score : null,
+  };
+}
+---
+
+<div data-bracket-stepper>
+  <!-- Rail de pasos -->
+  <div class="rounded-w3-card border border-w3-border bg-w3-surface p-3.5">
+    <div class="flex items-center">
+      {
+        steps.map((s, i) => (
+          <Fragment>
+            {i > 0 && <span class="mx-1 h-0.5 flex-1 bg-w3-border-strong" />}
+            <button
+              type="button"
+              class="step flex shrink-0 cursor-pointer flex-col items-center gap-1.5"
+              data-step={s.stage}
+              data-active={s.stage === defaultStage}
+              aria-label={STAGE_LABELS[s.stage]}
+            >
+              <span class="step-dot grid h-[30px] w-[30px] place-items-center rounded-full border text-[12px] font-bold">
+                {i + 1}
+              </span>
+              <span class="step-label text-[11px] font-medium">
+                {STAGE_SHORT[s.stage]}
+              </span>
+            </button>
+          </Fragment>
+        ))
+      }
+    </div>
+  </div>
+
+  <!-- Paneles por ronda -->
+  {
+    steps.map((s) => {
+      const { played, total } = roundProgress(s.matches);
+      return (
+        <div data-panel={s.stage} hidden={s.stage !== defaultStage}>
+          <div class="mb-3 mt-5 flex items-center justify-between px-0.5">
+            <h2 class="font-display text-[17px] font-bold text-w3-white">
+              {STAGE_LABELS[s.stage]}
+            </h2>
+            <span class="rounded-full border border-w3-border bg-w3-surface px-2.5 py-1 text-[12px] font-semibold text-w3-text-secondary">
+              {played} / {total} jugados
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            {stepMatches(s.stage).map(({ match, caption }, i) => {
+              const home = teamData(match, 'home');
+              const away = teamData(match, 'away');
+              const chip = statusChip(match);
+              return (
+                <div class="rounded-w3-card border border-w3-border bg-w3-surface p-3.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[12px] font-semibold text-w3-text-muted">
+                      {caption ?? `Llave ${i + 1}`} · {STAGE_SHORT[s.stage]}
+                    </span>
+                    <span
+                      class:list={[
+                        'rounded-full px-2.5 py-1 text-[12px] font-semibold',
+                        chip.cls,
+                      ]}
+                    >
+                      {chip.label}
+                    </span>
+                  </div>
+
+                  <div class="mt-3 flex items-center justify-center gap-2.5">
+                    <div class="flex min-w-0 flex-1 items-center justify-end gap-2.5">
+                      <span
+                        class:list={[
+                          'min-w-0 truncate text-[15px]',
+                          home.isWinner
+                            ? 'font-bold text-w3-white'
+                            : home.isTeam
+                              ? 'font-medium text-white/90'
+                              : 'font-medium text-w3-text-muted',
+                        ]}
+                      >
+                        {home.name}
+                      </span>
+                      {home.isTeam && home.flagUrl ? (
+                        <img
+                          src={home.flagUrl}
+                          alt=""
+                          class="h-[18px] w-[26px] shrink-0 rounded-[4px] object-cover ring-1 ring-white/10"
+                        />
+                      ) : (
+                        <span class="h-[18px] w-[26px] shrink-0 rounded-[4px] bg-white/10" />
+                      )}
+                    </div>
+
+                    <div class="flex shrink-0 items-center gap-1.5">
+                      <span
+                        class:list={[
+                          'grid h-11 w-12 place-items-center rounded-xl border border-w3-border-strong bg-w3-score-box font-display text-[22px] font-bold tabular-nums',
+                          home.isWinner ? 'text-w3-white' : 'text-w3-text-secondary',
+                        ]}
+                      >
+                        {home.score ?? '–'}
+                      </span>
+                      <span class="font-display text-[18px] font-bold text-w3-text-muted">
+                        :
+                      </span>
+                      <span
+                        class:list={[
+                          'grid h-11 w-12 place-items-center rounded-xl border border-w3-border-strong bg-w3-score-box font-display text-[22px] font-bold tabular-nums',
+                          away.isWinner ? 'text-w3-white' : 'text-w3-text-secondary',
+                        ]}
+                      >
+                        {away.score ?? '–'}
+                      </span>
+                    </div>
+
+                    <div class="flex min-w-0 flex-1 items-center gap-2.5">
+                      {away.isTeam && away.flagUrl ? (
+                        <img
+                          src={away.flagUrl}
+                          alt=""
+                          class="h-[18px] w-[26px] shrink-0 rounded-[4px] object-cover ring-1 ring-white/10"
+                        />
+                      ) : (
+                        <span class="h-[18px] w-[26px] shrink-0 rounded-[4px] bg-white/10" />
+                      )}
+                      <span
+                        class:list={[
+                          'min-w-0 truncate text-[15px]',
+                          away.isWinner
+                            ? 'font-bold text-w3-white'
+                            : away.isTeam
+                              ? 'font-medium text-white/90'
+                              : 'font-medium text-w3-text-muted',
+                        ]}
+                      >
+                        {away.name}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 h-px bg-w3-border" />
+                  <p class="mt-2.5 text-center text-[13px] text-w3-text-muted">
+                    {wentToPens(match) ? (
+                      <Fragment>
+                        Definido por penales{' '}
+                        <strong class="text-w3-white">
+                          {match.home.penalties}–{match.away.penalties}
+                        </strong>
+                      </Fragment>
+                    ) : match.kickoffAt ? (
+                      formatKickoff(match.kickoffAt)
+                    ) : (
+                      'Fecha por confirmar'
+                    )}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })
+  }
+</div>
+
+<style>
+  .step-dot {
+    background-color: var(--color-w3-surface-muted);
+    border-color: var(--color-w3-border-strong);
+    color: var(--color-w3-text-muted);
+  }
+  .step-label {
+    color: var(--color-w3-text-muted);
+  }
+  .step[data-active='true'] .step-dot {
+    background-color: var(--color-w3-primary);
+    border-color: var(--color-w3-primary);
+    color: var(--color-w3-black);
+  }
+  .step[data-active='true'] .step-label {
+    color: var(--color-w3-primary);
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-bracket-stepper]');
+  if (root) {
+    const steps = root.querySelectorAll<HTMLButtonElement>('[data-step]');
+    const panels = root.querySelectorAll<HTMLElement>('[data-panel]');
+    steps.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const stage = btn.dataset.step;
+        steps.forEach((s) =>
+          s.setAttribute('data-active', String(s.dataset.step === stage)),
+        );
+        panels.forEach((p) => {
+          p.hidden = p.dataset.panel !== stage;
+        });
+      });
+    });
+  }
+</script>
