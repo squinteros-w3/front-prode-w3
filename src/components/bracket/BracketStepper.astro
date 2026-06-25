@@ -113,8 +113,21 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
               const home = teamData(match, 'home');
               const away = teamData(match, 'away');
               const chip = statusChip(match);
+              const defined = isDefined(match);
+              const Tag = defined ? 'a' : 'div';
+              const href = defined
+                ? `/partidos?partido=${match.externalId}`
+                : undefined;
               return (
-                <div class="rounded-w3-card border border-w3-border bg-w3-surface p-3.5">
+                <Tag
+                  href={href}
+                  title={defined ? 'Cargá tu predicción' : undefined}
+                  class:list={[
+                    'block rounded-w3-card border border-w3-border bg-w3-surface p-3.5',
+                    defined &&
+                      'transition-colors hover:border-w3-primary-border',
+                  ]}
+                >
                   <div class="flex items-center justify-between">
                     <span class="text-[12px] font-semibold text-w3-text-muted">
                       {caption ?? `Llave ${i + 1}`} · {STAGE_SHORT[s.stage]}
@@ -216,7 +229,7 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
                       'Fecha por confirmar'
                     )}
                   </p>
-                </div>
+                </Tag>
               );
             })}
           </div>

@@ -1,14 +1,22 @@
 ---
 import MatchesView from '../components/matches/MatchesView.tsx';
 import Layout from '../layouts/Layout.astro';
-import { getMatches } from '../lib/api';
+import { getBracket, getMatches } from '../lib/api';
 
 export const prerender = false;
 
-const matches = await getMatches(Astro.locals.token);
+const [matches, bracket] = await Promise.all([
+  getMatches(Astro.locals.token),
+  getBracket(Astro.locals.token),
+]);
 const focusMatchId = Astro.url.searchParams.get('partido');
 ---
 
 <Layout title="Partidos — Prode W3" active="partidos">
-  <MatchesView client:load matches={matches} focusMatchId={focusMatchId} />
+  <MatchesView
+    client:load
+    matches={matches}
+    bracket={bracket}
+    focusMatchId={focusMatchId}
+  />
 </Layout>

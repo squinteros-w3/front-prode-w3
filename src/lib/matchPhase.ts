@@ -77,6 +77,6 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 export function stageLabel(match: { group: string | null; stage: string }): string {
-  if (match.group) return `Grupo ${match.group}`;
+  if (match.stage === 'group' && match.group) return `Grupo ${match.group}`;
   return STAGE_LABELS[match.stage] ?? match.stage;
 }
