@@ -75,7 +75,7 @@ function SyncTab() {
       <h3 className="font-semibold">Sincronización manual</h3>
       <p className="mt-1 text-sm text-white/50">
         Trae fixture y resultados desde worldcup26.ir. El sistema también
-        sincroniza automáticamente al mediodía y a la noche (horario argentino).
+        sincroniza automáticamente cada 5 minutos.
       </p>
       <button
         onClick={run}

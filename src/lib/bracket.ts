@@ -62,13 +62,60 @@ export function isDefined(m: BracketMatch): boolean {
   return m.home.team !== null && m.away.team !== null;
 }
 
-/** Ordena los cruces de una fase: por fecha si están programados, si no por el
- * orden del cuadro (externalId). */
-function sortMatches(a: BracketMatch, b: BracketMatch): number {
-  if (!a.kickoffAt || !b.kickoffAt) {
-    return Number(a.externalId) - Number(b.externalId);
+// Quién alimenta a cada cruce de 8vos en adelante (estructura FIJA FIFA 2026,
+// el mismo cuadro que arma el backend). Cada partido se nutre de dos previos.
+//   8vos:  89=G74/G77  90=G73/G75  91=G76/G78  92=G79/G80
+//          93=G83/G84  94=G81/G82  95=G86/G88  96=G85/G87
+// Si no aparece acá es una hoja (un 16avo, partidos 73–88).
+const FEEDERS: Record<number, [number, number]> = {
+  104: [101, 102],
+  101: [97, 98],
+  102: [99, 100],
+  97: [89, 90],
+  98: [93, 94],
+  99: [91, 92],
+  100: [95, 96],
+  89: [74, 77],
+  90: [73, 75],
+  91: [76, 78],
+  92: [79, 80],
+  93: [83, 84],
+  94: [81, 82],
+  95: [86, 88],
+  96: [85, 87],
+};
+
+// Posición vertical de cada partido dentro de su ronda = índice de su 16avo
+// más a la izquierda en el recorrido del árbol (home antes que away). Ordenar
+// cada ronda por este valor deja dos cajas adyacentes siempre alimentando el
+// mismo cruce siguiente; ordenar por externalId u horario rompe los cruces.
+const BRACKET_ORDER: Record<number, number> = (() => {
+  const leaves: number[] = [];
+  const collect = (n: number) => {
+    const f = FEEDERS[n];
+    if (!f) return void leaves.push(n);
+    collect(f[0]);
+    collect(f[1]);
+  };
+  collect(104);
+  const leafIndex = new Map(leaves.map((n, i) => [n, i]));
+  const leftmost = (n: number): number => {
+    const f = FEEDERS[n];
+    return f ? leftmost(f[0]) : (leafIndex.get(n) ?? 0);
+  };
+  const order: Record<number, number> = {};
+  for (const n of [104, ...Object.keys(FEEDERS).map(Number), ...leaves]) {
+    order[n] = leftmost(n);
   }
-  return new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime();
+  return order;
+})();
+
+/** Ordena los cruces de una fase por su posición en el cuadro (orden de árbol),
+ * no por número de partido ni horario, para que los cruces se dibujen bien. */
+function sortMatches(a: BracketMatch, b: BracketMatch): number {
+  const ea = Number(a.externalId);
+  const eb = Number(b.externalId);
+  return (BRACKET_ORDER[ea] ?? ea) - (BRACKET_ORDER[eb] ?? eb);
 }
 
 /** Agrupa el bracket por fase, en orden, descartando fases vacías. */
