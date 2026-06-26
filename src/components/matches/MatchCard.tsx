@@ -678,7 +678,9 @@ export default function MatchCard({
               No se pudieron cargar las predicciones.
             </p>
           )}
-          {resultsState === 'loaded' && <ResultsPanel results={results} />}
+          {resultsState === 'loaded' && (
+            <ResultsPanel results={results} isKnockout={isKnockout} />
+          )}
         </div>
       )}
 
@@ -960,7 +962,13 @@ function LivePanel({
   );
 }
 
-function ResultsPanel({ results }: { results: MatchResults | null }) {
+function ResultsPanel({
+  results,
+  isKnockout,
+}: {
+  results: MatchResults | null;
+  isKnockout: boolean;
+}) {
   const predictions = results?.predictions ?? [];
   if (predictions.length === 0) {
     return (
@@ -977,7 +985,11 @@ function ResultsPanel({ results }: { results: MatchResults | null }) {
   return (
     <div className="space-y-3 text-left">
       <ResultGroup
-        title="Resultado exacto · +3 (+2 con penales)"
+        title={
+          isKnockout
+            ? 'Resultado exacto · +3 (+2 con penales)'
+            : 'Resultado exacto · +3'
+        }
         entries={exact}
         tone="exact"
       />
