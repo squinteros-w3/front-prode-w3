@@ -1,5 +1,6 @@
 ---
 import { ROUND_STAGES, STAGE_SHORT, groupByStage } from '../../lib/bracket';
+import { formatKickoffCompact } from '../../lib/format';
 import type { BracketMatch } from '../../lib/types';
 import BracketCard from './BracketCard.astro';
 
@@ -12,15 +13,27 @@ const groups = groupByStage(bracket);
 const byStage = new Map(groups.map((g) => [g.stage, g]));
 
 // Geometría del cuadro (replicada del diseño Pencil): cards de 190×66, columnas
-// cada 244px. El centro vertical de cada card sigue center(r,i)=39·2^r·(2i+1),
+// cada 244px. El centro vertical de cada card sigue center(r,i)=PAD_TOP+UNIT·2^r·(2i+1),
 // de modo que el cruce de la ronda siguiente cae justo en el medio de su par.
+// UNIT (> CARD_H/2) deja aire entre cards para la etiqueta de fecha/hora, y
+// PAD_TOP reserva ese aire también arriba del primer cruce de cada columna.
 const CARD_W = 190;
 const CARD_H = 66;
 const COL_PITCH = 244;
+const UNIT = 44;
+const PAD_TOP = 20;
+const CAPTION_H = 15;
 
 const colX = (r: number) => r * COL_PITCH;
-const centerY = (r: number, i: number) => 39 * 2 ** r * (2 * i + 1);
+const centerY = (r: number, i: number) => PAD_TOP + UNIT * 2 ** r * (2 * i + 1);
 const topY = (r: number, i: number) => centerY(r, i) - CARD_H / 2;
+
+/** Fecha/hora (+ ciudad) a mostrar sobre la card: solo si el cruce ya está programado. */
+const kickoffCaption = (m: BracketMatch): string | null => {
+  if (!m.kickoffAt || m.status === 'FINISHED') return null;
+  const when = formatKickoffCompact(m.kickoffAt);
+  return m.city ? `${when} · ${m.city}` : when;
+};
 
 // Rondas presentes que forman las columnas (la final incluida; el 3er puesto va aparte).
 const rounds = ROUND_STAGES.map((stage, r) => ({
@@ -97,6 +110,40 @@ const canvasW = finalRound ? finalX + CARD_W : 0;
           style={`left:${l.x}px;top:${l.y}px;width:${l.w}px;height:${l.h}px`}
         />
       ))
+    }
+
+    {
+      rounds.flatMap(({ r, stage, matches }) =>
+        matches.map((m, i) => {
+          // La Final lleva su propio rótulo arriba ("FINAL"), no la hora.
+          const cap = stage === 'final' ? null : kickoffCaption(m);
+          return cap ? (
+            <div
+              class="absolute flex items-center gap-1 overflow-hidden text-w3-text-muted"
+              style={`left:${colX(r) + 6}px;top:${topY(r, i) - CAPTION_H}px;width:${CARD_W - 12}px;height:${CAPTION_H}px`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="shrink-0 opacity-60"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span class="truncate text-[10px] font-medium leading-none tabular-nums">
+                {cap}
+              </span>
+            </div>
+          ) : null;
+        }),
+      )
     }
 
     {

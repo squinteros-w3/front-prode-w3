@@ -146,6 +146,8 @@ export interface BracketMatch {
   stage: string;
   /** ISO UTC; null mientras el partido no esté programado en la DB. */
   kickoffAt: string | null;
+  /** Ciudad de la sede; null mientras el partido no esté cargado en la DB. */
+  city: string | null;
   status: MatchStatus;
   home: BracketSlot;
   away: BracketSlot;

@@ -224,7 +224,12 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
                         </strong>
                       </Fragment>
                     ) : match.kickoffAt ? (
-                      formatKickoff(match.kickoffAt)
+                      <Fragment>
+                        {formatKickoff(match.kickoffAt)}
+                        {match.city && (
+                          <span class="text-w3-text-muted"> · {match.city}</span>
+                        )}
+                      </Fragment>
                     ) : (
                       'Fecha por confirmar'
                     )}
