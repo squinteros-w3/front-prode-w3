@@ -20,6 +20,7 @@ import type {
   MatchResultEntry,
   MatchResults,
   MatchView,
+  PenaltyWinner,
 } from '../../lib/types';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -219,7 +220,14 @@ function scoresFromPrediction(prediction: MatchView['prediction']) {
   return {
     home: prediction ? String(prediction.homeScore) : '',
     away: prediction ? String(prediction.awayScore) : '',
+    penWinner: prediction?.penaltyWinner ?? null,
   };
+}
+
+/** Nombre corto del lado ganador por penales. */
+function sideName(side: PenaltyWinner, match: MatchView): string {
+  const team = side === 'HOME' ? match.homeTeam : match.awayTeam;
+  return team.code ?? team.name;
 }
 
 export default function MatchCard({
@@ -235,8 +243,14 @@ export default function MatchCard({
 
   const [home, setHome] = useState(initial.home);
   const [away, setAway] = useState(initial.away);
+  const [penWinner, setPenWinner] = useState<PenaltyWinner | null>(
+    initial.penWinner,
+  );
   const [savedHome, setSavedHome] = useState(initial.home);
   const [savedAway, setSavedAway] = useState(initial.away);
+  const [savedPenWinner, setSavedPenWinner] = useState<PenaltyWinner | null>(
+    initial.penWinner,
+  );
   const [state, setState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -252,18 +266,34 @@ export default function MatchCard({
     const next = scoresFromPrediction(match.prediction);
     setHome(next.home);
     setAway(next.away);
+    setPenWinner(next.penWinner);
     setSavedHome(next.home);
     setSavedAway(next.away);
-  }, [match.id, match.prediction?.homeScore, match.prediction?.awayScore]);
+    setSavedPenWinner(next.penWinner);
+  }, [
+    match.id,
+    match.prediction?.homeScore,
+    match.prediction?.awayScore,
+    match.prediction?.penaltyWinner,
+  ]);
 
   const editable = !match.locked && match.status === 'SCHEDULED';
   const finished = match.status === 'FINISHED';
   const phase = getPhase(match, now);
   const isLive = phase.key === 'live';
 
-  const hasSaved = savedHome !== '' && savedAway !== '';
+  // En eliminación, un empate va a penales: el usuario elige el ganador.
+  const isKnockout = match.stage !== 'group';
   const bothFilled = home !== '' && away !== '';
-  const changed = home !== savedHome || away !== savedAway;
+  const isDraw = bothFilled && home === away;
+  const needsWinner = isKnockout && isDraw;
+  const effectiveWinner: PenaltyWinner | null = needsWinner ? penWinner : null;
+
+  const hasSaved = savedHome !== '' && savedAway !== '';
+  const changed =
+    home !== savedHome ||
+    away !== savedAway ||
+    effectiveWinner !== savedPenWinner;
   const dirty = editable && bothFilled && changed;
 
   const openNoPrediction = editable && !hasSaved && !bothFilled;
@@ -292,13 +322,22 @@ export default function MatchCard({
       setState('error');
       return;
     }
+    if (needsWinner && !penWinner) {
+      setError('Es empate: elegí quién gana por penales.');
+      setState('error');
+      return;
+    }
     setState('saving');
     setError(null);
     try {
       const res = await fetch(`/api/predictions/${match.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ homeScore: h, awayScore: a }),
+        body: JSON.stringify({
+          homeScore: h,
+          awayScore: a,
+          penaltyWinner: effectiveWinner,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -308,11 +347,13 @@ export default function MatchCard({
       const prediction: MatchPrediction = {
         homeScore: data.homeScore ?? h,
         awayScore: data.awayScore ?? a,
+        penaltyWinner: data.penaltyWinner ?? effectiveWinner,
         pointsAwarded: data.pointsAwarded ?? 0,
         isExact: data.isExact ?? false,
       };
       setSavedHome(home);
       setSavedAway(away);
+      setSavedPenWinner(effectiveWinner);
       setState('saved');
       onPredictionSaved?.(match.id, prediction);
     } catch (e) {
@@ -363,7 +404,15 @@ export default function MatchCard({
     if (state !== 'idle') setState('idle');
   }
 
+  function handlePenWinner(side: PenaltyWinner) {
+    setPenWinner(side);
+    if (state !== 'idle') setState('idle');
+  }
+
   const points = match.prediction?.pointsAwarded ?? 0;
+  // Resultado real definido por penales (lo carga el admin en eliminación).
+  const realWentToPens =
+    match.homePenalties !== null && match.awayPenalties !== null;
 
   return (
     <div
@@ -440,6 +489,39 @@ export default function MatchCard({
         </div>
       </div>
 
+      {/* Empate en eliminación: el usuario elige el ganador por penales (+2 si acierta). */}
+      {editable && needsWinner && (
+        <div className="mt-2.5 rounded-xl border border-w3-primary-border bg-w3-primary-soft px-3 py-2 sm:mt-3.5">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-w3-text-secondary sm:text-xs">
+            <Trophy className="h-3 w-3 shrink-0 text-w3-gold" />
+            Empate: ¿quién gana por penales?{' '}
+            <span className="font-medium text-w3-text-muted">+2 si acertás</span>
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {(['HOME', 'AWAY'] as const).map((side) => {
+              const selected = penWinner === side;
+              const team = side === 'HOME' ? match.homeTeam : match.awayTeam;
+              return (
+                <button
+                  key={side}
+                  type="button"
+                  onClick={() => handlePenWinner(side)}
+                  aria-pressed={selected}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors sm:text-[13px] ${
+                    selected
+                      ? 'border-w3-primary bg-w3-primary text-w3-black'
+                      : 'border-w3-border bg-w3-surface text-w3-text-secondary hover:border-w3-primary-border hover:text-w3-white'
+                  }`}
+                >
+                  <TeamFlag flagUrl={team.flagUrl} />
+                  <span className="truncate">{team.code ?? team.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Footer compacto en mobile */}
       <div className="mt-2 flex min-h-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-1.5 text-center sm:min-h-[34px] sm:pt-2">
         {finished && (
@@ -453,14 +535,18 @@ export default function MatchCard({
             <span className="text-xs font-medium text-w3-text-secondary sm:text-[13px]">
               <span className="sm:hidden">
                 Real {match.homeScore}–{match.awayScore}
+                {realWentToPens &&
+                  ` (pen ${match.homePenalties}–${match.awayPenalties})`}
               </span>
               <span className="hidden sm:inline">
                 Resultado real: {match.homeScore}–{match.awayScore}
+                {realWentToPens &&
+                  ` (penales ${match.homePenalties}–${match.awayPenalties})`}
               </span>
             </span>
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold sm:text-xs ${
-                points === 3
+                points >= 3
                   ? 'bg-w3-primary text-w3-black'
                   : points === 1
                     ? 'bg-w3-primary-soft text-w3-primary'
@@ -468,11 +554,13 @@ export default function MatchCard({
               }`}
             >
               {points > 0 && <Check className="h-3 w-3" />}
-              {points === 3
-                ? '¡Exacto! +3'
-                : points === 1
-                  ? '+1'
-                  : '+0'}
+              {points === 5
+                ? '¡Exacto + penales! +5'
+                : points === 3
+                  ? '¡Exacto! +3'
+                  : points === 1
+                    ? '+1'
+                    : '+0'}
             </span>
             <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-w3-text-muted transition-colors group-hover:text-w3-primary sm:text-xs">
               <Users className="h-3 w-3" />
@@ -497,6 +585,8 @@ export default function MatchCard({
             {lockedWithPrediction && (
               <span className="text-xs font-medium text-w3-text-secondary sm:text-[13px]">
                 Tu pronóstico: {savedHome}–{savedAway}
+                {savedPenWinner &&
+                  ` · gana ${sideName(savedPenWinner, match)} por penales`}
               </span>
             )}
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-w3-live transition-colors group-hover:opacity-80 sm:text-xs">
@@ -514,8 +604,16 @@ export default function MatchCard({
         {lockedWithPrediction && !finished && !isLive && (
           <span className="inline-flex items-center gap-1 rounded-full border border-w3-border bg-w3-surface-muted px-2 py-0.5 text-xs font-semibold text-w3-text-secondary sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[13px]">
             <Lock className="h-3 w-3 text-w3-text-muted" />
-            <span className="sm:hidden">Pronóstico cerrado</span>
-            <span className="hidden sm:inline">Tu pronóstico está cerrado</span>
+            <span className="sm:hidden">
+              {savedPenWinner
+                ? `${savedHome}–${savedAway} · pen ${sideName(savedPenWinner, match)}`
+                : 'Pronóstico cerrado'}
+            </span>
+            <span className="hidden sm:inline">
+              {savedPenWinner
+                ? `Tu pronóstico: ${savedHome}–${savedAway} · gana ${sideName(savedPenWinner, match)} por penales`
+                : 'Tu pronóstico está cerrado'}
+            </span>
           </span>
         )}
 
@@ -878,7 +976,11 @@ function ResultsPanel({ results }: { results: MatchResults | null }) {
 
   return (
     <div className="space-y-3 text-left">
-      <ResultGroup title="Resultado exacto · +3" entries={exact} tone="exact" />
+      <ResultGroup
+        title="Resultado exacto · +3 (+2 con penales)"
+        entries={exact}
+        tone="exact"
+      />
       <ResultGroup
         title="Acertaron el resultado · +1"
         entries={outcome}

@@ -52,6 +52,67 @@ export function wentToPens(m: BracketMatch): boolean {
   return m.home.penalties !== null && m.away.penalties !== null;
 }
 
+/** Nombre corto del lado de un cruce (para el ganador por penales elegido). */
+function sideShortName(m: BracketMatch, side: 'home' | 'away'): string {
+  const slot = m[side];
+  return (
+    slot.team?.code ??
+    slot.team?.name ??
+    (side === 'home' ? 'Local' : 'Visitante')
+  );
+}
+
+/** Resumen del pronóstico del usuario: "2–2 · pen ARG" o "2–1". null si no hay. */
+export function predictionSummary(m: BracketMatch): string | null {
+  const p = m.prediction;
+  if (!p) return null;
+  let s = `${p.homeScore}–${p.awayScore}`;
+  if (p.penaltyWinner) {
+    const side = p.penaltyWinner === 'HOME' ? 'home' : 'away';
+    s += ` · pen ${sideShortName(m, side)}`;
+  }
+  return s;
+}
+
+/** Marcador pronosticado, sin penales: "2-0". null si no hay pronóstico. */
+export function predictionScore(m: BracketMatch): string | null {
+  const p = m.prediction;
+  return p ? `${p.homeScore}-${p.awayScore}` : null;
+}
+
+/** Equipo que el usuario eligió como ganador por penales (empate pronosticado). */
+export function predictedAdvancer(
+  m: BracketMatch,
+): { flagUrl: string | null; name: string } | null {
+  const p = m.prediction;
+  if (!p?.penaltyWinner) return null;
+  const side = p.penaltyWinner === 'HOME' ? 'home' : 'away';
+  return { flagUrl: m[side].team?.flagUrl ?? null, name: sideShortName(m, side) };
+}
+
+/** Línea del resultado real por penales: "Penales 4-2 · Avanza Brasil". */
+export function penAdvanceLine(m: BracketMatch): string | null {
+  if (!wentToPens(m)) return null;
+  const w = winner(m);
+  const name = w ? sideShortName(m, w) : '';
+  return `Penales ${m.home.penalties}-${m.away.penalties}${name ? ` · Avanza ${name}` : ''}`;
+}
+
+export type PointsTone = 'primary' | 'gold' | 'muted';
+
+/** Badge de puntos del pronóstico (solo en partidos finalizados con pronóstico). */
+export function pointsBadge(
+  m: BracketMatch,
+): { text: string; short: string; tone: PointsTone } | null {
+  if (m.status !== 'FINISHED' || !m.prediction) return null;
+  const pts = m.prediction.pointsAwarded;
+  if (pts >= 5)
+    return { text: 'Exacto + ganador · +5', short: '+5', tone: 'primary' };
+  if (pts >= 3) return { text: 'Exacto · +3', short: '+3', tone: 'primary' };
+  if (pts === 1) return { text: 'Resultado · +1', short: '+1', tone: 'gold' };
+  return { text: 'Sin acierto · +0', short: '+0', tone: 'muted' };
+}
+
 /** Nombre a mostrar: el equipo si ya está definido, si no la etiqueta del cruce. */
 export function slotName(slot: BracketSlot): string {
   return slot.team?.name ?? slot.label ?? 'A definir';

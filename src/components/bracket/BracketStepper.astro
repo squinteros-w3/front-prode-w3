@@ -1,11 +1,15 @@
 ---
-import { formatKickoff } from '../../lib/format';
+import { formatKickoffCompact } from '../../lib/format';
 import {
   ROUND_STAGES,
   STAGE_LABELS,
   STAGE_SHORT,
   groupByStage,
   isDefined,
+  penAdvanceLine,
+  pointsBadge,
+  predictedAdvancer,
+  predictionScore,
   roundProgress,
   slotName,
   wentToPens,
@@ -21,15 +25,16 @@ const { bracket } = Astro.props;
 const groups = groupByStage(bracket);
 const byStage = new Map(groups.map((g) => [g.stage, g]));
 
-// Pasos = rondas presentes. El 3er puesto se muestra dentro del paso Final.
 const steps = ROUND_STAGES.map((stage) => byStage.get(stage)).filter(
   (g): g is NonNullable<typeof g> => !!g,
 );
 const thirdMatches = byStage.get('third')?.matches ?? [];
 
-// Cruces que van en cada paso (la final suma el 3er puesto).
-function stepMatches(stage: string): { match: BracketMatch; caption?: string }[] {
-  const base = (byStage.get(stage)?.matches ?? []).map((match) => ({ match }));
+function stepMatches(stage: string): { match: BracketMatch; caption: string }[] {
+  const base = (byStage.get(stage)?.matches ?? []).map((match, i) => ({
+    match,
+    caption: `Llave ${i + 1}`,
+  }));
   if (stage === 'final') {
     return base.concat(
       thirdMatches.map((match) => ({ match, caption: '3er puesto' })),
@@ -38,19 +43,10 @@ function stepMatches(stage: string): { match: BracketMatch; caption?: string }[]
   return base;
 }
 
-// Paso activo por defecto: la primera ronda con algún cruce sin jugar.
 const defaultStage =
   steps.find((s) => roundProgress(s.matches).played < s.matches.length)?.stage ??
   steps[0]?.stage ??
   '';
-
-function statusChip(m: BracketMatch) {
-  if (m.status === 'FINISHED')
-    return { label: 'Finalizado', cls: 'bg-w3-score-box text-w3-text-secondary' };
-  if (isDefined(m))
-    return { label: 'Por jugarse', cls: 'bg-w3-primary-soft text-w3-primary' };
-  return { label: 'A definir', cls: 'bg-w3-score-box text-w3-text-muted' };
-}
 
 function teamData(m: BracketMatch, side: 'home' | 'away') {
   const slot = m[side];
@@ -60,36 +56,80 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
     flagUrl: slot.team?.flagUrl ?? null,
     isTeam: slot.team !== null,
     isWinner: win === side,
-    score: m.status === 'FINISHED' && slot.score !== null ? slot.score : null,
+    score:
+      m.status === 'FINISHED' && slot.score !== null ? String(slot.score) : '–',
   };
 }
+
+const PTS_TONE: Record<string, string> = {
+  primary: 'text-w3-primary',
+  gold: 'text-w3-gold',
+  muted: 'text-w3-text-muted',
+};
 ---
 
 <div data-bracket-stepper>
   <!-- Rail de pasos -->
   <div class="rounded-w3-card border border-w3-border bg-w3-surface p-3.5">
-    <div class="flex items-center">
-      {
-        steps.map((s, i) => (
-          <Fragment>
-            {i > 0 && <span class="mx-1 h-0.5 flex-1 bg-w3-border-strong" />}
-            <button
-              type="button"
-              class="step flex shrink-0 cursor-pointer flex-col items-center gap-1.5"
-              data-step={s.stage}
-              data-active={s.stage === defaultStage}
-              aria-label={STAGE_LABELS[s.stage]}
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center">
+        {
+          steps.map((s, i) => (
+            <Fragment>
+              {i > 0 && <span class="mx-1 h-0.5 flex-1 bg-w3-border-strong" />}
+              <button
+                type="button"
+                class="step shrink-0"
+                data-step={s.stage}
+                data-active={s.stage === defaultStage}
+                aria-label={STAGE_LABELS[s.stage]}
+              >
+                <span class="step-dot grid h-[30px] w-[30px] place-items-center rounded-full border text-[13px] font-bold">
+                  {s.stage === 'final' ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                      <path d="M4 22h16" />
+                      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                    </svg>
+                  ) : (
+                    i + 1
+                  )}
+                </span>
+              </button>
+            </Fragment>
+          ))
+        }
+      </div>
+      <div class="flex items-center justify-between">
+        {
+          steps.map((s) => (
+            <span
+              class:list={[
+                'step-label text-[11px]',
+                s.stage === defaultStage
+                  ? 'font-bold text-w3-primary'
+                  : 'font-medium text-w3-text-muted',
+              ]}
+              data-label={s.stage}
             >
-              <span class="step-dot grid h-[30px] w-[30px] place-items-center rounded-full border text-[12px] font-bold">
-                {i + 1}
-              </span>
-              <span class="step-label text-[11px] font-medium">
-                {STAGE_SHORT[s.stage]}
-              </span>
-            </button>
-          </Fragment>
-        ))
-      }
+              {STAGE_SHORT[s.stage]}
+            </span>
+          ))
+        }
+      </div>
     </div>
   </div>
 
@@ -108,12 +148,17 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
             </span>
           </div>
 
-          <div class="space-y-3">
-            {stepMatches(s.stage).map(({ match, caption }, i) => {
+          <div class="flex flex-col gap-3">
+            {stepMatches(s.stage).map(({ match, caption }) => {
               const home = teamData(match, 'home');
               const away = teamData(match, 'away');
-              const chip = statusChip(match);
               const defined = isDefined(match);
+              const finished = match.status === 'FINISHED';
+              const pens = wentToPens(match);
+              const penLine = penAdvanceLine(match);
+              const predScore = predictionScore(match);
+              const advancer = predictedAdvancer(match);
+              const badge = pointsBadge(match);
               const Tag = defined ? 'a' : 'div';
               const href = defined
                 ? `/partidos?partido=${match.externalId}`
@@ -123,26 +168,51 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
                   href={href}
                   title={defined ? 'Cargá tu predicción' : undefined}
                   class:list={[
-                    'block rounded-w3-card border border-w3-border bg-w3-surface p-3.5',
+                    'flex flex-col gap-3 rounded-w3-card border border-w3-border bg-w3-surface p-3.5',
                     defined &&
                       'transition-colors hover:border-w3-primary-border',
                   ]}
                 >
-                  <div class="flex items-center justify-between">
-                    <span class="text-[12px] font-semibold text-w3-text-muted">
-                      {caption ?? `Llave ${i + 1}`} · {STAGE_SHORT[s.stage]}
-                    </span>
-                    <span
-                      class:list={[
-                        'rounded-full px-2.5 py-1 text-[12px] font-semibold',
-                        chip.cls,
-                      ]}
-                    >
-                      {chip.label}
-                    </span>
+                  {/* Meta */}
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex min-w-0 flex-col gap-[3px]">
+                      <span class="text-[12px] font-semibold text-w3-text-muted">
+                        {caption} · {STAGE_SHORT[s.stage]}
+                      </span>
+                      {match.kickoffAt && !finished && (
+                        <span class="flex items-center gap-1.5 text-[12px] font-semibold text-w3-text-secondary">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="shrink-0 text-w3-text-muted"
+                          >
+                            <rect width="18" height="18" x="3" y="4" rx="2" />
+                            <path d="M3 10h18M8 2v4M16 2v4" />
+                          </svg>
+                          <span class="truncate">
+                            {formatKickoffCompact(match.kickoffAt)}
+                            {match.city ? ` · ${match.city}` : ''}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                    {pens && (
+                      <span class="flex shrink-0 items-center gap-1.5 rounded-full border border-w3-gold bg-w3-gold-soft px-2.5 py-1 text-[12px] font-semibold text-w3-gold">
+                        <span class="h-[7px] w-[7px] rounded-full bg-w3-gold" />
+                        Penales
+                      </span>
+                    )}
                   </div>
 
-                  <div class="mt-3 flex items-center justify-center gap-2.5">
+                  {/* Marcador */}
+                  <div class="flex items-center justify-center gap-2.5">
                     <div class="flex min-w-0 flex-1 items-center justify-end gap-2.5">
                       <span
                         class:list={[
@@ -156,7 +226,7 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
                       >
                         {home.name}
                       </span>
-                      {home.isTeam && home.flagUrl ? (
+                      {home.flagUrl ? (
                         <img
                           src={home.flagUrl}
                           alt=""
@@ -170,27 +240,27 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
                     <div class="flex shrink-0 items-center gap-1.5">
                       <span
                         class:list={[
-                          'grid h-11 w-12 place-items-center rounded-xl border border-w3-border-strong bg-w3-score-box font-display text-[22px] font-bold tabular-nums',
+                          'grid h-10 w-9 place-items-center rounded-[10px] border border-w3-border-strong bg-w3-score-box font-display text-[20px] font-bold tabular-nums',
                           home.isWinner ? 'text-w3-white' : 'text-w3-text-secondary',
                         ]}
                       >
-                        {home.score ?? '–'}
+                        {home.score}
                       </span>
                       <span class="font-display text-[18px] font-bold text-w3-text-muted">
                         :
                       </span>
                       <span
                         class:list={[
-                          'grid h-11 w-12 place-items-center rounded-xl border border-w3-border-strong bg-w3-score-box font-display text-[22px] font-bold tabular-nums',
+                          'grid h-10 w-9 place-items-center rounded-[10px] border border-w3-border-strong bg-w3-score-box font-display text-[20px] font-bold tabular-nums',
                           away.isWinner ? 'text-w3-white' : 'text-w3-text-secondary',
                         ]}
                       >
-                        {away.score ?? '–'}
+                        {away.score}
                       </span>
                     </div>
 
                     <div class="flex min-w-0 flex-1 items-center gap-2.5">
-                      {away.isTeam && away.flagUrl ? (
+                      {away.flagUrl ? (
                         <img
                           src={away.flagUrl}
                           alt=""
@@ -214,26 +284,94 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
                     </div>
                   </div>
 
-                  <div class="mt-3 h-px bg-w3-border" />
-                  <p class="mt-2.5 text-center text-[13px] text-w3-text-muted">
-                    {wentToPens(match) ? (
-                      <Fragment>
-                        Definido por penales{' '}
-                        <strong class="text-w3-white">
-                          {match.home.penalties}–{match.away.penalties}
-                        </strong>
-                      </Fragment>
-                    ) : match.kickoffAt ? (
-                      <Fragment>
-                        {formatKickoff(match.kickoffAt)}
-                        {match.city && (
-                          <span class="text-w3-text-muted"> · {match.city}</span>
+                  {/* Penales (resultado real) */}
+                  {penLine && (
+                    <div class="flex items-center justify-center gap-1.5">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="shrink-0 text-w3-text-muted"
+                      >
+                        <path d="M12 13V2l8 4-8 4" />
+                        <path d="M20.561 10.222a9 9 0 1 1-12.55-5.29" />
+                        <path d="M8.002 9.997a5 5 0 1 0 8.9 2.02" />
+                      </svg>
+                      <span class="text-[12.5px] font-semibold text-w3-text-secondary">
+                        {penLine}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Pronóstico */}
+                  {(predScore || finished) && (
+                    <Fragment>
+                      <div class="h-px w-full bg-w3-border" />
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-2">
+                          <span class="text-[12px] font-medium text-w3-text-muted">
+                            Tu pronóstico
+                          </span>
+                          {predScore ? (
+                            <span class="flex items-center gap-1.5 rounded-lg bg-w3-surface-muted px-2 py-[3px]">
+                              <span class="font-display text-[13px] font-bold tabular-nums text-w3-text-secondary">
+                                {predScore.replace('-', ' - ')}
+                              </span>
+                              {advancer && (
+                                <Fragment>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2.5"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    class="shrink-0 text-w3-text-muted"
+                                  >
+                                    <path d="m9 18 6-6-6-6" />
+                                  </svg>
+                                  {advancer.flagUrl ? (
+                                    <img
+                                      src={advancer.flagUrl}
+                                      alt=""
+                                      class="h-[12px] w-[17px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
+                                    />
+                                  ) : (
+                                    <span class="text-[12px] font-bold text-w3-text-secondary">
+                                      {advancer.name}
+                                    </span>
+                                  )}
+                                </Fragment>
+                              )}
+                            </span>
+                          ) : (
+                            <span class="text-[12px] font-medium text-w3-text-muted">
+                              Sin pronóstico
+                            </span>
+                          )}
+                        </div>
+                        {badge && (
+                          <span
+                            class:list={[
+                              'shrink-0 text-[12px] font-semibold',
+                              PTS_TONE[badge.tone],
+                            ]}
+                          >
+                            {badge.text}
+                          </span>
                         )}
-                      </Fragment>
-                    ) : (
-                      'Fecha por confirmar'
-                    )}
-                  </p>
+                      </div>
+                    </Fragment>
+                  )}
                 </Tag>
               );
             })}
@@ -250,16 +388,10 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
     border-color: var(--color-w3-border-strong);
     color: var(--color-w3-text-muted);
   }
-  .step-label {
-    color: var(--color-w3-text-muted);
-  }
   .step[data-active='true'] .step-dot {
     background-color: var(--color-w3-primary);
     border-color: var(--color-w3-primary);
     color: var(--color-w3-black);
-  }
-  .step[data-active='true'] .step-label {
-    color: var(--color-w3-primary);
   }
 </style>
 
@@ -267,6 +399,7 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
   const root = document.querySelector<HTMLElement>('[data-bracket-stepper]');
   if (root) {
     const steps = root.querySelectorAll<HTMLButtonElement>('[data-step]');
+    const labels = root.querySelectorAll<HTMLElement>('[data-label]');
     const panels = root.querySelectorAll<HTMLElement>('[data-panel]');
     steps.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -274,6 +407,13 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
         steps.forEach((s) =>
           s.setAttribute('data-active', String(s.dataset.step === stage)),
         );
+        labels.forEach((l) => {
+          const active = l.dataset.label === stage;
+          l.classList.toggle('font-bold', active);
+          l.classList.toggle('text-w3-primary', active);
+          l.classList.toggle('font-medium', !active);
+          l.classList.toggle('text-w3-text-muted', !active);
+        });
         panels.forEach((p) => {
           p.hidden = p.dataset.panel !== stage;
         });

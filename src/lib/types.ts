@@ -1,5 +1,7 @@
 export type Role = 'USER' | 'ADMIN';
 export type MatchStatus = 'SCHEDULED' | 'FINISHED';
+/** Lado ganador por penales (HOME = local, AWAY = visitante). */
+export type PenaltyWinner = 'HOME' | 'AWAY';
 
 export interface AppUser {
   id: string;
@@ -20,6 +22,8 @@ export interface TeamLite {
 export interface MatchPrediction {
   homeScore: number;
   awayScore: number;
+  /** Ganador por penales elegido en un empate de eliminación; null si no aplica. */
+  penaltyWinner: PenaltyWinner | null;
   pointsAwarded: number;
   isExact: boolean;
 }
@@ -47,6 +51,7 @@ export interface MatchResultEntry {
   user: { id: string; name: string; avatarUrl: string | null };
   homeScore: number;
   awayScore: number;
+  penaltyWinner: PenaltyWinner | null;
   points: number;
   isExact: boolean;
 }
@@ -62,6 +67,7 @@ export interface LivePredictionEntry {
   user: { id: string; name: string; avatarUrl: string | null };
   homeScore: number;
   awayScore: number;
+  penaltyWinner: PenaltyWinner | null;
 }
 
 export interface LivePredictions {
@@ -151,6 +157,8 @@ export interface BracketMatch {
   status: MatchStatus;
   home: BracketSlot;
   away: BracketSlot;
+  /** Pronóstico del usuario para este cruce (mergeado desde /matches). */
+  prediction?: MatchPrediction | null;
 }
 
 export interface AdminMatchView {

@@ -60,6 +60,45 @@ const toneStyles: Record<
     ring: 'ring-w3-border',
   },
 };
+
+// Puntaje de los cruces de eliminación (con elección de ganador por penales).
+type KoTone = 'bonus' | 'exact' | 'outcome';
+const koRules: { points: string; tone: KoTone; title: string; detail: string }[] =
+  [
+    {
+      points: '+5',
+      tone: 'bonus',
+      title: 'Empate exacto + ganador de penales',
+      detail:
+        'Pronosticás 2–2 y que gana el Local. Sale 2–2 y el Local pasa por penales: +3 del exacto y +2 del ganador.',
+    },
+    {
+      points: '+3',
+      tone: 'exact',
+      title: 'Empate exacto, ganador errado',
+      detail:
+        'Pronosticás 2–2 y que gana el Local, pero pasa el Visitante: +3 del empate exacto, 0 del ganador.',
+    },
+    {
+      points: '+1',
+      tone: 'outcome',
+      title: 'Empate inexacto',
+      detail:
+        'Pronosticás 2–2 y sale 1–1: solo +1 por acertar el empate, sin el bonus del ganador.',
+    },
+    {
+      points: '+3',
+      tone: 'exact',
+      title: 'Resultado con ganador',
+      detail:
+        'Si pronosticás un ganador (no empate) puntúa igual que siempre: +3 exacto, +1 solo el ganador.',
+    },
+  ];
+const koBadge: Record<KoTone, string> = {
+  bonus: 'bg-w3-gold-soft text-w3-gold',
+  exact: 'bg-w3-primary text-w3-black',
+  outcome: 'bg-w3-primary-soft text-w3-primary',
+};
 ---
 
 <Layout title="Puntos — Prode W3" active="puntos">
@@ -128,6 +167,53 @@ const toneStyles: Record<
       })
     }
   </div>
+
+  <section
+    id="cruces"
+    class="mt-8 scroll-mt-24 rounded-w3-card border border-w3-border bg-w3-surface p-5 sm:scroll-mt-28 sm:p-6"
+  >
+    <div class="mb-2 flex items-center gap-2">
+      <span
+        class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-w3-gold-soft px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-w3-gold"
+      >
+        Eliminatoria
+      </span>
+      <h2 class="font-display text-lg font-bold sm:text-xl">
+        Cómo se puntúan los cruces
+      </h2>
+    </div>
+
+    <p class="mb-4 max-w-2xl text-sm text-w3-text-secondary">
+      En la eliminación los partidos no pueden terminar empatados: si
+      pronosticás un empate, también elegís quién pasa por penales. Ese
+      pronóstico suma un extra solo si acertás el
+      <strong class="text-w3-white"> empate exacto</strong> y además el
+      <strong class="text-w3-white"> ganador</strong>.
+    </p>
+
+    <div class="grid gap-2.5 sm:grid-cols-2">
+      {
+        koRules.map((r) => (
+          <div class="flex items-start gap-3 rounded-xl border border-w3-border bg-w3-surface-muted px-3.5 py-3">
+            <span
+              class:list={[
+                'mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums',
+                koBadge[r.tone],
+              ]}
+            >
+              {r.points}
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-w3-white">{r.title}</p>
+              <p class="mt-0.5 text-[13px] leading-snug text-w3-text-muted">
+                {r.detail}
+              </p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
 
   <div class="mt-8 grid gap-3 sm:grid-cols-2">
     <div class="rounded-w3-card border border-w3-border bg-w3-surface p-4">

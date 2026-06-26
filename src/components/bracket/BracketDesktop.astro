@@ -1,8 +1,19 @@
 ---
-import { ROUND_STAGES, STAGE_SHORT, groupByStage } from '../../lib/bracket';
+import {
+  ROUND_STAGES,
+  STAGE_SHORT,
+  groupByStage,
+  isDefined,
+  penAdvanceLine,
+  pointsBadge,
+  predictedAdvancer,
+  predictionScore,
+  slotName,
+  wentToPens,
+  winner,
+} from '../../lib/bracket';
 import { formatKickoffCompact } from '../../lib/format';
 import type { BracketMatch } from '../../lib/types';
-import BracketCard from './BracketCard.astro';
 
 interface Props {
   bracket: BracketMatch[];
@@ -12,30 +23,23 @@ const { bracket } = Astro.props;
 const groups = groupByStage(bracket);
 const byStage = new Map(groups.map((g) => [g.stage, g]));
 
-// Geometría del cuadro (replicada del diseño Pencil): cards de 190×66, columnas
-// cada 244px. El centro vertical de cada card sigue center(r,i)=PAD_TOP+UNIT·2^r·(2i+1),
-// de modo que el cruce de la ronda siguiente cae justo en el medio de su par.
-// UNIT (> CARD_H/2) deja aire entre cards para la etiqueta de fecha/hora, y
-// PAD_TOP reserva ese aire también arriba del primer cruce de cada columna.
+// Geometría del cuadro (replicada del diseño Pencil). La primera columna
+// (16avos) usa cards "ricas" de 108px con fecha, marcador y pronóstico; las
+// rondas siguientes usan cards compactas de 66px. El centro de cada cruce cae
+// justo en el medio del par que lo alimenta.
 const CARD_W = 190;
-const CARD_H = 66;
 const COL_PITCH = 244;
-const UNIT = 44;
-const PAD_TOP = 20;
-const CAPTION_H = 15;
+const RICH_H = 108;
+const COMPACT_H = 66;
+const RICH_PITCH = 122;
 
 const colX = (r: number) => r * COL_PITCH;
-const centerY = (r: number, i: number) => PAD_TOP + UNIT * 2 ** r * (2 * i + 1);
-const topY = (r: number, i: number) => centerY(r, i) - CARD_H / 2;
+const cardH = (r: number) => (r === 0 ? RICH_H : COMPACT_H);
+// center(0,i)=60+122i ; center(r,i)=60+61(2^r−1)+122·2^r·i
+const centerY = (r: number, i: number) =>
+  60 + 61 * (2 ** r - 1) + RICH_PITCH * 2 ** r * i;
+const topY = (r: number, i: number) => centerY(r, i) - cardH(r) / 2;
 
-/** Fecha/hora (+ ciudad) a mostrar sobre la card: solo si el cruce ya está programado. */
-const kickoffCaption = (m: BracketMatch): string | null => {
-  if (!m.kickoffAt || m.status === 'FINISHED') return null;
-  const when = formatKickoffCompact(m.kickoffAt);
-  return m.city ? `${when} · ${m.city}` : when;
-};
-
-// Rondas presentes que forman las columnas (la final incluida; el 3er puesto va aparte).
 const rounds = ROUND_STAGES.map((stage, r) => ({
   stage,
   r,
@@ -44,13 +48,11 @@ const rounds = ROUND_STAGES.map((stage, r) => ({
 
 const finalRound = rounds.find((x) => x.stage === 'final');
 const third = byStage.get('third')?.matches[0] ?? null;
-
 const finalX = finalRound ? colX(finalRound.r) : 0;
 const finalCard = finalRound?.matches[0] ?? null;
 const finalTop = finalRound ? topY(finalRound.r, 0) : 0;
 const thirdTop = finalTop + 110;
 
-// Conectores entre columnas (uno por par que alimenta a la ronda siguiente).
 interface Line {
   x: number;
   y: number;
@@ -77,24 +79,73 @@ for (let k = 0; k < rounds.length - 1; k++) {
   }
 }
 
-let maxBottom = thirdTop + CARD_H;
+let maxBottom = thirdTop + COMPACT_H;
 for (const { r, matches } of rounds) {
-  maxBottom = Math.max(maxBottom, topY(r, matches.length - 1) + CARD_H);
+  maxBottom = Math.max(maxBottom, topY(r, matches.length - 1) + cardH(r));
 }
 const canvasW = finalRound ? finalX + CARD_W : 0;
+
+function td(m: BracketMatch, side: 'home' | 'away') {
+  const slot = m[side];
+  const win = winner(m);
+  return {
+    name: slotName(slot),
+    flagUrl: slot.team?.flagUrl ?? null,
+    isTeam: slot.team !== null,
+    isWinner: win === side,
+    score:
+      m.status === 'FINISHED' && slot.score !== null ? String(slot.score) : '–',
+  };
+}
+
+function richMeta(m: BracketMatch): string {
+  const parts: string[] = [];
+  if (m.kickoffAt) parts.push(formatKickoffCompact(m.kickoffAt));
+  if (m.city) parts.push(m.city);
+  const pen = penAdvanceLine(m);
+  let base = parts.join(' · ').toUpperCase();
+  if (!base) base = m.status === 'FINISHED' ? 'FINALIZADO' : 'A DEFINIR';
+  if (wentToPens(m)) base += ` · PEN ${m.home.penalties}-${m.away.penalties}`;
+  return base;
+}
+
+const PTS_TONE: Record<string, string> = {
+  primary: 'text-w3-primary',
+  gold: 'text-w3-gold',
+  muted: 'text-w3-text-muted',
+};
+
+const roundCards = rounds.map(({ r, stage, matches }) => ({
+  r,
+  stage,
+  rich: r === 0,
+  cards: matches.map((m, i) => ({
+    m,
+    x: colX(r),
+    y: topY(r, i),
+    home: td(m, 'home'),
+    away: td(m, 'away'),
+  })),
+}));
+const thirdData = third
+  ? { m: third, home: td(third, 'home'), away: td(third, 'away') }
+  : null;
 ---
 
 <div class="overflow-x-auto pb-2">
   <!-- Labels de ronda -->
   <div class="flex" style={`width:${canvasW}px`}>
     {
-      rounds.map(({ stage }, idx) => (
+      rounds.map(({ stage, matches }, idx) => (
         <div
-          class="flex flex-col items-center"
+          class="flex flex-col items-center gap-[3px]"
           style={`width:${CARD_W}px${idx < rounds.length - 1 ? `;margin-right:${COL_PITCH - CARD_W}px` : ''}`}
         >
           <span class="font-display text-[13px] font-bold uppercase tracking-wide text-w3-primary">
             {STAGE_SHORT[stage]}
+          </span>
+          <span class="text-[11px] font-medium text-w3-text-muted">
+            {matches.length} {matches.length === 1 ? 'cruce' : 'cruces'}
           </span>
         </div>
       ))
@@ -102,7 +153,7 @@ const canvasW = finalRound ? finalX + CARD_W : 0;
   </div>
 
   <!-- Lienzo del cuadro -->
-  <div class="relative mt-3" style={`width:${canvasW}px;height:${maxBottom}px`}>
+  <div class="relative mt-4" style={`width:${canvasW}px;height:${maxBottom}px`}>
     {
       connectors.map((l) => (
         <div
@@ -113,79 +164,233 @@ const canvasW = finalRound ? finalX + CARD_W : 0;
     }
 
     {
-      rounds.flatMap(({ r, stage, matches }) =>
-        matches.map((m, i) => {
-          // La Final lleva su propio rótulo arriba ("FINAL"), no la hora.
-          const cap = stage === 'final' ? null : kickoffCaption(m);
-          return cap ? (
-            <div
-              class="absolute flex items-center gap-1 overflow-hidden text-w3-text-muted"
-              style={`left:${colX(r) + 6}px;top:${topY(r, i) - CAPTION_H}px;width:${CARD_W - 12}px;height:${CAPTION_H}px`}
+      roundCards.map(({ rich, cards, stage }) =>
+        cards.map(({ m, x, y, home, away }) => {
+          const defined = isDefined(m);
+          const Tag = defined ? 'a' : 'div';
+          const href = defined
+            ? `/partidos?partido=${m.externalId}`
+            : undefined;
+          const badge = pointsBadge(m);
+          const predScore = predictionScore(m);
+          const advancer = predictedAdvancer(m);
+          const dim = !rich && !defined ? 'opacity-70' : '';
+          return rich ? (
+            <Tag
+              href={href}
+              title={defined ? 'Cargá tu predicción' : undefined}
+              class:list={[
+                'absolute flex flex-col justify-center gap-1 overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface px-2.5 py-2',
+                defined && 'transition-colors hover:border-w3-primary-border',
+              ]}
+              style={`left:${x}px;top:${y}px;width:${CARD_W}px;height:${RICH_H}px`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="shrink-0 opacity-60"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span class="truncate text-[10px] font-medium leading-none tabular-nums">
-                {cap}
+              <span class="truncate text-[10px] font-bold tracking-[0.3px] text-w3-text-muted">
+                {richMeta(m)}
               </span>
-            </div>
-          ) : null;
-        }),
-      )
-    }
 
-    {
-      rounds.flatMap(({ r, matches }) =>
-        matches.map((m, i) => (
-          <BracketCard
-            match={m}
-            x={colX(r)}
-            y={topY(r, i)}
-            width={CARD_W}
-            height={CARD_H}
-          />
-        )),
+              {[home, away].map((t) => (
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex min-w-0 items-center gap-[7px]">
+                    {t.flagUrl ? (
+                      <img
+                        src={t.flagUrl}
+                        alt=""
+                        class="h-[12px] w-[18px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
+                      />
+                    ) : (
+                      <span class="h-[12px] w-[18px] shrink-0 rounded-[3px] bg-white/10" />
+                    )}
+                    <span
+                      class:list={[
+                        'min-w-0 truncate text-[13px]',
+                        t.isWinner
+                          ? 'font-bold text-w3-white'
+                          : t.isTeam
+                            ? 'font-medium text-white/85'
+                            : 'font-medium text-w3-text-muted',
+                      ]}
+                    >
+                      {t.name}
+                    </span>
+                  </div>
+                  <span
+                    class:list={[
+                      'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
+                      t.isWinner
+                        ? 'bg-w3-surface-muted text-w3-white'
+                        : 'text-w3-text-muted',
+                    ]}
+                  >
+                    {t.score}
+                  </span>
+                </div>
+              ))}
+
+              <div class="flex items-center justify-between gap-2 border-t border-w3-border pt-[5px]">
+                <div class="flex min-w-0 items-center gap-1.5">
+                  <span class="text-[9.5px] font-semibold tracking-[0.2px] text-w3-text-muted">
+                    Pronóstico
+                  </span>
+                  <span class="truncate font-display text-[11.5px] font-bold tabular-nums text-w3-text-secondary">
+                    {predScore ?? '—'}
+                    {advancer && (
+                      <span class="font-sans text-[10px] font-semibold text-w3-text-muted">
+                        {' '}
+                        ›{advancer.name}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {badge && (
+                  <span class="shrink-0 rounded-md bg-w3-surface-muted px-[7px] py-[2px]">
+                    <span
+                      class:list={[
+                        'font-display text-[11px] font-extrabold',
+                        PTS_TONE[badge.tone],
+                      ]}
+                    >
+                      {badge.short}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </Tag>
+          ) : (
+            <Tag
+              href={href}
+              title={defined ? 'Cargá tu predicción' : undefined}
+              class:list={[
+                'absolute flex overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface',
+                dim,
+                defined && 'transition-colors hover:border-w3-primary-border',
+              ]}
+              style={`left:${x}px;top:${y}px;width:${CARD_W}px;height:${COMPACT_H}px`}
+            >
+              <span
+                class:list={[
+                  'w-1 shrink-0',
+                  winner(m) ? 'bg-w3-primary' : 'bg-w3-border-strong',
+                ]}
+              />
+              <div class="flex flex-1 flex-col justify-center gap-[3px] px-2.5">
+                {[home, away].map((t) => (
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex min-w-0 items-center gap-[7px]">
+                      {t.flagUrl ? (
+                        <img
+                          src={t.flagUrl}
+                          alt=""
+                          class="h-[12px] w-[18px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
+                        />
+                      ) : (
+                        <span class="h-[12px] w-[18px] shrink-0 rounded-[3px] bg-white/10" />
+                      )}
+                      <span
+                        class:list={[
+                          'min-w-0 truncate text-[13px]',
+                          t.isWinner
+                            ? 'font-bold text-w3-white'
+                            : t.isTeam
+                              ? 'font-semibold text-w3-text-secondary'
+                              : 'font-medium text-w3-text-muted',
+                        ]}
+                      >
+                        {t.name}
+                      </span>
+                    </div>
+                    <span
+                      class:list={[
+                        'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
+                        t.isWinner
+                          ? 'bg-w3-surface-muted text-w3-white'
+                          : 'text-w3-text-muted',
+                      ]}
+                    >
+                      {t.score}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Tag>
+          );
+        }),
       )
     }
 
     {
       finalCard && (
         <span
-          class="absolute font-display text-[11px] font-bold tracking-wide text-w3-gold"
+          class="absolute font-display text-[11px] font-bold uppercase tracking-wide text-w3-gold"
           style={`left:${finalX + 4}px;top:${finalTop - 20}px`}
         >
-          FINAL
+          Final · 1er puesto
         </span>
       )
     }
+
     {
-      third && (
+      thirdData && (
         <Fragment>
           <span
-            class="absolute font-display text-[11px] font-bold tracking-wide text-w3-bronze"
+            class="absolute font-display text-[11px] font-bold uppercase tracking-wide text-w3-bronze"
             style={`left:${finalX + 4}px;top:${thirdTop - 20}px`}
           >
-            3ER PUESTO
+            3er puesto
           </span>
-          <BracketCard
-            match={third}
-            x={finalX}
-            y={thirdTop}
-            width={CARD_W}
-            height={CARD_H}
-          />
+          <div
+            class:list={[
+              'absolute flex overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface',
+              !isDefined(thirdData.m) && 'opacity-70',
+            ]}
+            style={`left:${finalX}px;top:${thirdTop}px;width:${CARD_W}px;height:${COMPACT_H}px`}
+          >
+            <span
+              class:list={[
+                'w-1 shrink-0',
+                winner(thirdData.m) ? 'bg-w3-bronze' : 'bg-w3-border-strong',
+              ]}
+            />
+            <div class="flex flex-1 flex-col justify-center gap-[3px] px-2.5">
+              {[thirdData.home, thirdData.away].map((t) => (
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex min-w-0 items-center gap-[7px]">
+                    {t.flagUrl ? (
+                      <img
+                        src={t.flagUrl}
+                        alt=""
+                        class="h-[12px] w-[18px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
+                      />
+                    ) : (
+                      <span class="h-[12px] w-[18px] shrink-0 rounded-[3px] bg-white/10" />
+                    )}
+                    <span
+                      class:list={[
+                        'min-w-0 truncate text-[13px]',
+                        t.isWinner
+                          ? 'font-bold text-w3-white'
+                          : t.isTeam
+                            ? 'font-semibold text-w3-text-secondary'
+                            : 'font-medium text-w3-text-muted',
+                      ]}
+                    >
+                      {t.name}
+                    </span>
+                  </div>
+                  <span
+                    class:list={[
+                      'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
+                      t.isWinner
+                        ? 'bg-w3-surface-muted text-w3-white'
+                        : 'text-w3-text-muted',
+                    ]}
+                  >
+                    {t.score}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </Fragment>
       )
     }

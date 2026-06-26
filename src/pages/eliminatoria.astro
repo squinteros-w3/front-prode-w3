@@ -2,12 +2,25 @@
 import Layout from '../layouts/Layout.astro';
 import BracketDesktop from '../components/bracket/BracketDesktop.astro';
 import BracketStepper from '../components/bracket/BracketStepper.astro';
-import { getBracket } from '../lib/api';
+import { getBracket, getMatches } from '../lib/api';
 import { groupByStage } from '../lib/bracket';
 
 export const prerender = false;
 
-const bracket = await getBracket(Astro.locals.token);
+const [rawBracket, matches] = await Promise.all([
+  getBracket(Astro.locals.token),
+  getMatches(Astro.locals.token),
+]);
+
+// Mergeamos el pronóstico del usuario al cuadro (por externalId) para mostrar
+// el marcador elegido y, en empates, el ganador por penales.
+const predByExternal = new Map(
+  matches.filter((m) => m.prediction).map((m) => [m.externalId, m.prediction]),
+);
+const bracket = rawBracket.map((m) => ({
+  ...m,
+  prediction: predByExternal.get(m.externalId) ?? null,
+}));
 const hasMatches = groupByStage(bracket).length > 0;
 ---
 

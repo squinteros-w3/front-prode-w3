@@ -258,13 +258,23 @@ export default function MatchesView({
             Partidos
           </h1>
           <p className="mt-1.5 text-sm text-w3-text-secondary sm:text-[15px]">
-            {crossFilter === 'pending'
-              ? 'Todos los partidos que todavía podés cargar — grupos y eliminatoria'
-              : crossFilter === 'finished'
-                ? 'Resultados de los partidos ya jugados — grupos y eliminatoria'
-                : phase === 'knockout'
-                  ? 'Eliminación directa'
-                  : 'Cargá tu predicción hasta 15 minutos antes de cada partido'}
+            {crossFilter === 'pending' ? (
+              'Todos los partidos que todavía podés cargar — grupos y eliminatoria'
+            ) : crossFilter === 'finished' ? (
+              'Resultados de los partidos ya jugados — grupos y eliminatoria'
+            ) : phase === 'knockout' ? (
+              <>
+                Eliminación directa.{' '}
+                <a
+                  href="/puntajes#cruces"
+                  className="font-medium text-w3-primary underline-offset-2 hover:underline"
+                >
+                  ¿Dudas de cómo se puntúa un cruce con penales?
+                </a>
+              </>
+            ) : (
+              'Cargá tu predicción hasta 15 minutos antes de cada partido'
+            )}
           </p>
         </div>
         <ProgressCard loaded={loaded} total={total} pending={pendingTotal} />

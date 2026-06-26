@@ -129,6 +129,7 @@ export default function KnockoutView({
           </section>
         );
       })}
+
     </div>
   );
 }
