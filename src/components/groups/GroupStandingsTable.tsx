@@ -9,6 +9,8 @@ interface Props {
   onSimulate: () => void;
   onResetSim: () => void;
   canSimulate: boolean;
+  /** El 3º de este grupo clasificó a 16avos (mejor tercero). */
+  qualifiedThird?: boolean;
 }
 
 export default function GroupStandingsTable({
@@ -18,6 +20,7 @@ export default function GroupStandingsTable({
   onSimulate,
   onResetSim,
   canSimulate,
+  qualifiedThird = false,
 }: Props) {
   const rows = simulating && simulated ? simulated : standings;
   const showDelta = simulating && simulated;
@@ -97,12 +100,17 @@ export default function GroupStandingsTable({
         {rows.map((row, i) => {
           const simRow = showDelta ? (row as SimulatedRow) : null;
           const inZone = i < 2;
+          const thirdQualified = i === 2 && qualifiedThird;
 
           return (
             <div
               key={row.team.id}
               className={`flex items-center gap-1.5 rounded-lg px-1.5 py-2 sm:gap-2 sm:px-2.5 ${
-                inZone ? 'bg-w3-surface-muted' : ''
+                inZone
+                  ? 'bg-w3-surface-muted'
+                  : thirdQualified
+                    ? 'bg-w3-primary-soft/30'
+                    : ''
               }`}
             >
               <span className="w-4 shrink-0 text-center text-xs font-bold text-w3-white sm:text-[13px]">
@@ -196,9 +204,11 @@ function DeltaBadge({ delta }: { delta: number }) {
 export function GroupStandingsOverviewCard({
   group,
   standings,
+  qualifiedThird = false,
 }: {
   group: string;
   standings: StandingRow[];
+  qualifiedThird?: boolean;
 }) {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-w3-card border border-w3-border bg-w3-surface transition-colors group-hover:border-w3-primary-border">
@@ -210,16 +220,22 @@ export function GroupStandingsOverviewCard({
       </div>
 
       <div className="p-2">
-        {standings.map((s, i) => (
+        {standings.map((s, i) => {
+          const thirdQualified = i === 2 && qualifiedThird;
+          return (
           <div
             key={s.team.id}
             className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${
-              i < 2 ? 'bg-w3-primary-soft/50' : ''
+              i < 2
+                ? 'bg-w3-primary-soft/50'
+                : thirdQualified
+                  ? 'bg-w3-primary-soft/25'
+                  : ''
             }`}
           >
             <span
               className={`grid h-5 w-5 place-items-center rounded text-[11px] font-bold ${
-                i < 2
+                i < 2 || thirdQualified
                   ? 'bg-w3-primary/25 text-w3-primary'
                   : 'text-w3-text-muted'
               }`}
@@ -240,7 +256,8 @@ export function GroupStandingsOverviewCard({
             </div>
             <span className="text-sm font-bold text-w3-primary">{s.pts}</span>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-auto flex items-center justify-end gap-1 border-t border-w3-border px-4 py-2 text-xs font-medium text-w3-text-muted transition-colors group-hover:text-w3-primary">

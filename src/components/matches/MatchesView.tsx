@@ -10,7 +10,6 @@ import { dayKey, formatDayUpper, todayKey } from '../../lib/format';
 import { getPhase } from '../../lib/matchPhase';
 import type { BracketMatch, MatchPrediction, MatchView } from '../../lib/types';
 import FilterChip from './FilterChip';
-import KnockoutView from './KnockoutView';
 import MatchCard from './MatchCard';
 import MatchesToolbar, { type DayTab } from './MatchesToolbar';
 import PhaseTabs, { type MatchPhaseTab } from './PhaseTabs';
@@ -68,7 +67,6 @@ export default function MatchesView({
 
   const isKnockout = phase === 'knockout';
   const activeMatches = isKnockout ? knockoutMatches : groupMatches;
-  const knockoutTotal = bracket.length || knockoutMatches.length;
 
   // "Tu progreso", "Por cargar" y "Finalizados" son globales: cuentan grupos y
   // eliminatoria juntos (todo el torneo).
@@ -79,8 +77,9 @@ export default function MatchesView({
     (m) => getPhase(m, now).key === 'finished',
   ).length;
 
-  // El segmentado Hoy/Todos filtra la lista de la fase activa.
-  const phaseAllCount = isKnockout ? knockoutTotal : groupMatches.length;
+  // El segmentado Hoy/Todos filtra la lista de la fase activa. Cuenta los
+  // partidos cargables de la fase (en eliminatoria, los cruces ya definidos).
+  const phaseAllCount = activeMatches.length;
 
   const today = todayKey();
   const todayCount = activeMatches.filter(
@@ -98,8 +97,12 @@ export default function MatchesView({
     setCrossFilter((cur) => (cur === value ? 'none' : value));
   }
 
+  // Lista de la fase activa (grupos o eliminatoria) ordenada cronológicamente.
+  // En eliminatoria solo entran los cruces ya definidos (los que existen como
+  // partido cargable); los placeholders "a definir" viven en el cuadro
+  // (/eliminatoria), no acá.
   const filtered = useMemo(() => {
-    return groupMatches
+    return activeMatches
       .filter((m) => {
         if (dayTab === 'today' && dayKey(m.kickoffAt) !== today) return false;
         return true;
@@ -108,7 +111,7 @@ export default function MatchesView({
         (a, b) =>
           new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime(),
       );
-  }, [groupMatches, dayTab, today]);
+  }, [activeMatches, dayTab, today]);
 
   // Lista unificada (grupos + eliminatoria) para las vistas "Por cargar" y
   // "Finalizados". Pendientes en orden cronológico; finalizados, más reciente
@@ -185,12 +188,9 @@ export default function MatchesView({
       (m) => m.id === focusMatchId || m.externalId === focusMatchId,
     );
     if (!target) return;
-    // En grupos el partido tiene que estar en la lista filtrada; en
-    // eliminatoria siempre se renderiza dentro de su ronda.
-    const visible =
-      target.stage === 'group'
-        ? filtered.some((m) => m.id === target.id)
-        : phase === 'knockout';
+    // Ambas fases usan la misma lista cronológica: el partido tiene que estar
+    // en la lista filtrada de la fase activa para poder hacerle scroll.
+    const visible = filtered.some((m) => m.id === target.id);
     if (!visible) return;
 
     const scrollTimer = window.setTimeout(() => {
@@ -355,29 +355,10 @@ export default function MatchesView({
             ))}
           </div>
         )
-      ) : phase === 'knockout' ? (
-        <>
-          <MatchesToolbar
-            variant="knockout"
-            dayTab={dayTab}
-            onDayTabChange={setDayTab}
-            todayCount={todayCount}
-            allCount={phaseAllCount}
-          />
-          <KnockoutView
-            bracket={bracket}
-            matches={knockoutMatches}
-            now={now}
-            today={today}
-            dayTab={dayTab}
-            highlightId={highlightId}
-            onPredictionSaved={handlePredictionSaved}
-          />
-        </>
       ) : (
         <>
           <MatchesToolbar
-            variant="group"
+            variant={isKnockout ? 'knockout' : 'group'}
             dayTab={dayTab}
             onDayTabChange={setDayTab}
             todayCount={todayCount}

@@ -34,6 +34,15 @@ export default function GroupsView({
 
   const selectedGroup = groups.find((g) => g.group === selected) ?? null;
 
+  // Grupos cuyo 3º clasificó a 16avos (top-8 del ranking de terceros).
+  const qualifiedThirdGroups = useMemo(
+    () =>
+      new Set(
+        thirdPlace.rows.filter((r) => r.qualified).map((r) => r.group),
+      ),
+    [thirdPlace],
+  );
+
   const groupMatches = useMemo(() => {
     if (!selected) return [];
     return matches
@@ -136,6 +145,7 @@ export default function GroupsView({
               onSimulate={() => setSimulating(true)}
               onResetSim={() => setSimulating(false)}
               canSimulate={hasPredictionsForSim}
+              qualifiedThird={qualifiedThirdGroups.has(selectedGroup.group)}
             />
           </div>
           <div className="min-w-0 flex-1">
@@ -155,6 +165,7 @@ export default function GroupsView({
                 <GroupStandingsOverviewCard
                   group={g.group}
                   standings={g.standings}
+                  qualifiedThird={qualifiedThirdGroups.has(g.group)}
                 />
               </button>
             ))}
