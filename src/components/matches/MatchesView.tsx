@@ -41,7 +41,11 @@ export default function MatchesView({
 }: Props) {
   const now = useNow();
   const [matches, setMatches] = useState(initialMatches);
-  const [phase, setPhase] = useState<MatchPhaseTab>('group');
+  // Por defecto mostramos Eliminatorias si ya hay cruces cargados; si todavía
+  // no existen (fase de grupos en curso) arranca en Grupos.
+  const [phase, setPhase] = useState<MatchPhaseTab>(() =>
+    initialMatches.some((m) => m.stage !== 'group') ? 'knockout' : 'group',
+  );
   const [dayTab, setDayTab] = useState<DayTab>('all');
   // Vista unificada (ambas fases juntas) por encima de la selección de fase.
   const [crossFilter, setCrossFilter] = useState<CrossFilter>('none');
