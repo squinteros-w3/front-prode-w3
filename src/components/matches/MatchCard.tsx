@@ -58,28 +58,93 @@ function ResultAvatar({
   );
 }
 
+/** Ganador por penales elegido en un empate de eliminación: "› bandera". */
+function PenaltyWinnerFlag({
+  winner,
+  match,
+}: {
+  winner: PenaltyWinner;
+  match: MatchView;
+}) {
+  const team = winner === 'HOME' ? match.homeTeam : match.awayTeam;
+  return (
+    <>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="shrink-0 text-w3-text-muted"
+      >
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+      {team.flagUrl ? (
+        <img
+          src={team.flagUrl}
+          alt={team.code ?? team.name}
+          title={team.name}
+          className="h-[11px] w-[16px] shrink-0 rounded-[2px] object-cover ring-1 ring-white/10"
+        />
+      ) : (
+        <span className="text-[11px] font-bold text-w3-text-secondary">
+          {team.code ?? team.name}
+        </span>
+      )}
+    </>
+  );
+}
+
+type ResultTone = 'gold' | 'exact' | 'outcome' | 'miss';
+
+const RESULT_TONE: Record<
+  ResultTone,
+  { title: string; chip: string; badge: string }
+> = {
+  gold: {
+    title: 'text-w3-gold',
+    chip: 'border-w3-gold/40 bg-w3-gold-soft',
+    badge: 'bg-w3-gold/15 text-w3-gold',
+  },
+  exact: {
+    title: 'text-w3-primary',
+    chip: 'border-w3-primary-border bg-w3-primary-soft',
+    badge: 'bg-w3-primary-soft text-w3-primary',
+  },
+  outcome: {
+    title: 'text-w3-text-secondary',
+    chip: 'border-w3-border bg-w3-surface',
+    badge: 'bg-w3-score-box text-w3-text-secondary',
+  },
+  miss: {
+    title: 'text-w3-text-muted',
+    chip: 'border-w3-border bg-w3-surface',
+    badge: '',
+  },
+};
+
 function ResultGroup({
   title,
   entries,
   tone,
+  match,
 }: {
   title: string;
   entries: MatchResultEntry[];
-  tone: 'exact' | 'outcome' | 'miss';
+  tone: ResultTone;
+  match: MatchView;
 }) {
   if (entries.length === 0) return null;
-
-  const titleClass =
-    tone === 'exact'
-      ? 'text-w3-primary'
-      : tone === 'outcome'
-        ? 'text-w3-text-secondary'
-        : 'text-w3-text-muted';
+  const styles = RESULT_TONE[tone];
 
   return (
     <div>
       <div className="mb-1.5 flex items-center gap-1.5">
-        <span className={`text-[11px] font-bold uppercase tracking-wide ${titleClass}`}>
+        <span className={`text-[11px] font-bold uppercase tracking-wide ${styles.title}`}>
           {title}
         </span>
         <span className="rounded-full bg-w3-score-box px-1.5 py-0.5 text-[10px] font-semibold text-w3-text-muted">
@@ -90,19 +155,25 @@ function ResultGroup({
         {entries.map((e) => (
           <span
             key={e.user.id}
-            className={`inline-flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2 ${
-              tone === 'exact'
-                ? 'border-w3-primary-border bg-w3-primary-soft'
-                : 'border-w3-border bg-w3-surface'
-            }`}
+            className={`inline-flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2 ${styles.chip}`}
           >
             <ResultAvatar name={e.user.name} avatarUrl={e.user.avatarUrl} />
             <span className="text-xs font-semibold text-w3-white">
               {e.user.name}
             </span>
-            <span className="text-[11px] font-medium tabular-nums text-w3-text-muted">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium tabular-nums text-w3-text-muted">
               {e.homeScore}–{e.awayScore}
+              {e.penaltyWinner && (
+                <PenaltyWinnerFlag winner={e.penaltyWinner} match={match} />
+              )}
             </span>
+            {tone !== 'miss' && (
+              <span
+                className={`rounded px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${styles.badge}`}
+              >
+                +{e.points}
+              </span>
+            )}
           </span>
         ))}
       </div>
@@ -679,7 +750,11 @@ export default function MatchCard({
             </p>
           )}
           {resultsState === 'loaded' && (
-            <ResultsPanel results={results} isKnockout={isKnockout} />
+            <ResultsPanel
+              results={results}
+              isKnockout={isKnockout}
+              match={match}
+            />
           )}
         </div>
       )}
@@ -697,11 +772,7 @@ export default function MatchCard({
             </p>
           )}
           {liveState === 'loaded' && (
-            <LivePanel
-              data={livePreds}
-              homeName={match.homeTeam.name}
-              awayName={match.awayTeam.name}
-            />
+            <LivePanel data={livePreds} match={match} />
           )}
         </div>
       )}
@@ -761,10 +832,12 @@ function LiveGroup({
   label,
   tone,
   entries,
+  match,
 }: {
   label: string;
   tone: OutcomeTone;
   entries: LivePredictionEntry[];
+  match: MatchView;
 }) {
   if (entries.length === 0) return null;
   const sorted = [...entries].sort(
@@ -794,8 +867,13 @@ function LiveGroup({
             <span className="text-xs font-semibold text-w3-white">
               {e.user.name}
             </span>
-            <span className="rounded bg-w3-score-box px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-w3-text-secondary">
-              {e.homeScore}–{e.awayScore}
+            <span className="inline-flex items-center gap-1 rounded bg-w3-score-box px-1.5 py-0.5">
+              <span className="text-[11px] font-bold tabular-nums text-w3-text-secondary">
+                {e.homeScore}–{e.awayScore}
+              </span>
+              {e.penaltyWinner && (
+                <PenaltyWinnerFlag winner={e.penaltyWinner} match={match} />
+              )}
             </span>
           </span>
         ))}
@@ -856,13 +934,13 @@ function SectionTitle({ children }: { children: ReactNode }) {
 
 function LivePanel({
   data,
-  homeName,
-  awayName,
+  match,
 }: {
   data: LivePredictions | null;
-  homeName: string;
-  awayName: string;
+  match: MatchView;
 }) {
+  const homeName = match.homeTeam.name;
+  const awayName = match.awayTeam.name;
   const predictions = data?.predictions ?? [];
   if (predictions.length === 0) {
     return (
@@ -954,6 +1032,7 @@ function LivePanel({
               label={o.label}
               tone={o.tone}
               entries={o.list}
+              match={match}
             />
           ))}
         </div>
@@ -965,9 +1044,11 @@ function LivePanel({
 function ResultsPanel({
   results,
   isKnockout,
+  match,
 }: {
   results: MatchResults | null;
   isKnockout: boolean;
+  match: MatchView;
 }) {
   const predictions = results?.predictions ?? [];
   if (predictions.length === 0) {
@@ -978,27 +1059,53 @@ function ResultsPanel({
     );
   }
 
-  const exact = predictions.filter((p) => p.isExact);
+  // El cruce se definió por penales solo si fue eliminación y terminó empatado.
+  // Solo en ese caso distinguimos el bonus por acertar el ganador (+5 dorado).
+  const wentToPenalties =
+    isKnockout &&
+    results?.homeScore != null &&
+    results.homeScore === results.awayScore;
+
   const outcome = predictions.filter((p) => p.points === 1);
   const missed = predictions.filter((p) => p.points === 0);
 
   return (
     <div className="space-y-3 text-left">
-      <ResultGroup
-        title={
-          isKnockout
-            ? 'Resultado exacto · +3 (+2 con penales)'
-            : 'Resultado exacto · +3'
-        }
-        entries={exact}
-        tone="exact"
-      />
+      {wentToPenalties ? (
+        <>
+          <ResultGroup
+            title="Resultado y ganador exacto · +5"
+            entries={predictions.filter((p) => p.points === 5)}
+            tone="gold"
+            match={match}
+          />
+          <ResultGroup
+            title="Resultado exacto · +3"
+            entries={predictions.filter((p) => p.isExact && p.points !== 5)}
+            tone="exact"
+            match={match}
+          />
+        </>
+      ) : (
+        <ResultGroup
+          title="Resultado exacto · +3"
+          entries={predictions.filter((p) => p.isExact)}
+          tone="exact"
+          match={match}
+        />
+      )}
       <ResultGroup
         title="Acertaron el resultado · +1"
         entries={outcome}
         tone="outcome"
+        match={match}
       />
-      <ResultGroup title="No acertaron" entries={missed} tone="miss" />
+      <ResultGroup
+        title="No acertaron"
+        entries={missed}
+        tone="miss"
+        match={match}
+      />
     </div>
   );
 }
