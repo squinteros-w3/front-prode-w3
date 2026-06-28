@@ -29,7 +29,7 @@ const byStage = new Map(groups.map((g) => [g.stage, g]));
 // en el medio del par que lo alimenta.
 const CARD_W = 190;
 const COL_PITCH = 244;
-const RICH_H = 128; // alto de card (subido para dar aire a meta y pronóstico)
+const RICH_H = 144; // alto de card: cabe meta + marcador + pronóstico con badge de puntos sin recortar
 const V_GAP = 16; // separación vertical entre cards de la 1ª columna
 const RICH_PITCH = RICH_H + V_GAP;
 const TOP_MARGIN = 6;
@@ -191,7 +191,7 @@ const thirdHref = thirdData?.defined
               href={href}
               title={defined ? 'Cargá tu predicción' : undefined}
               class:list={[
-                'absolute flex flex-col justify-center gap-1.5 overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface px-3 py-2.5',
+                'absolute flex flex-col justify-between gap-1.5 overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface px-3 py-2.5',
                 defined && 'transition-colors hover:border-w3-primary-border',
               ]}
               style={`left:${x}px;top:${y}px;width:${CARD_W}px;height:${RICH_H}px`}
@@ -200,50 +200,52 @@ const thirdHref = thirdData?.defined
                 {richMeta(m)}
               </span>
 
-              {[home, away].map((t) => (
-                <div class="flex items-center justify-between gap-2">
-                  <div class="flex min-w-0 items-center gap-[7px]">
-                    {t.flagUrl ? (
-                      <img
-                        src={t.flagUrl}
-                        alt=""
-                        class="h-[12px] w-[18px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
-                      />
-                    ) : (
-                      <span class="h-[12px] w-[18px] shrink-0 rounded-[3px] bg-white/10" />
-                    )}
+              <div class="flex flex-col gap-1.5">
+                {[home, away].map((t) => (
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex min-w-0 items-center gap-[7px]">
+                      {t.flagUrl ? (
+                        <img
+                          src={t.flagUrl}
+                          alt=""
+                          class="h-[12px] w-[18px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
+                        />
+                      ) : (
+                        <span class="h-[12px] w-[18px] shrink-0 rounded-[3px] bg-white/10" />
+                      )}
+                      <span
+                        class:list={[
+                          'min-w-0 truncate text-[13px]',
+                          t.isWinner
+                            ? 'font-bold text-w3-white'
+                            : t.isTeam
+                              ? 'font-medium text-white/85'
+                              : 'font-medium text-w3-text-muted',
+                        ]}
+                      >
+                        {t.name}
+                      </span>
+                    </div>
                     <span
                       class:list={[
-                        'min-w-0 truncate text-[13px]',
+                        'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
                         t.isWinner
-                          ? 'font-bold text-w3-white'
-                          : t.isTeam
-                            ? 'font-medium text-white/85'
-                            : 'font-medium text-w3-text-muted',
+                          ? 'bg-w3-surface-muted text-w3-white'
+                          : 'text-w3-text-muted',
                       ]}
                     >
-                      {t.name}
+                      {t.score}
                     </span>
                   </div>
-                  <span
-                    class:list={[
-                      'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
-                      t.isWinner
-                        ? 'bg-w3-surface-muted text-w3-white'
-                        : 'text-w3-text-muted',
-                    ]}
-                  >
-                    {t.score}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
 
               <div class="mt-0.5 flex items-center justify-between gap-2 border-t border-w3-border pt-2">
                 <div class="flex min-w-0 items-center gap-1.5">
-                  <span class="text-[9.5px] font-semibold tracking-[0.2px] text-w3-text-muted">
+                  <span class="min-w-0 truncate text-[9.5px] font-semibold tracking-[0.2px] text-w3-text-muted">
                     Tu pronóstico
                   </span>
-                  <span class="truncate font-display text-[11.5px] font-bold tabular-nums text-w3-text-secondary">
+                  <span class="shrink-0 font-display text-[11.5px] font-bold tabular-nums text-w3-text-secondary">
                     {predScore ?? '—'}
                     {advancer && (
                       <span class="ml-1 inline-flex items-center gap-0.5 align-middle">
@@ -319,7 +321,7 @@ const thirdHref = thirdData?.defined
             href={thirdHref}
             title={thirdData.defined ? 'Cargá tu predicción' : undefined}
             class:list={[
-              'absolute flex flex-col justify-center gap-1.5 overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface px-3 py-2.5',
+              'absolute flex flex-col justify-between gap-1.5 overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface px-3 py-2.5',
               thirdData.defined &&
                 'transition-colors hover:border-w3-primary-border',
             ]}
@@ -329,50 +331,52 @@ const thirdHref = thirdData?.defined
               {thirdData.meta}
             </span>
 
-            {[thirdData.home, thirdData.away].map((t) => (
-              <div class="flex items-center justify-between gap-2">
-                <div class="flex min-w-0 items-center gap-[7px]">
-                  {t.flagUrl ? (
-                    <img
-                      src={t.flagUrl}
-                      alt=""
-                      class="h-[12px] w-[18px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
-                    />
-                  ) : (
-                    <span class="h-[12px] w-[18px] shrink-0 rounded-[3px] bg-white/10" />
-                  )}
+            <div class="flex flex-col gap-1.5">
+              {[thirdData.home, thirdData.away].map((t) => (
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex min-w-0 items-center gap-[7px]">
+                    {t.flagUrl ? (
+                      <img
+                        src={t.flagUrl}
+                        alt=""
+                        class="h-[12px] w-[18px] shrink-0 rounded-[3px] object-cover ring-1 ring-white/10"
+                      />
+                    ) : (
+                      <span class="h-[12px] w-[18px] shrink-0 rounded-[3px] bg-white/10" />
+                    )}
+                    <span
+                      class:list={[
+                        'min-w-0 truncate text-[13px]',
+                        t.isWinner
+                          ? 'font-bold text-w3-white'
+                          : t.isTeam
+                            ? 'font-medium text-white/85'
+                            : 'font-medium text-w3-text-muted',
+                      ]}
+                    >
+                      {t.name}
+                    </span>
+                  </div>
                   <span
                     class:list={[
-                      'min-w-0 truncate text-[13px]',
+                      'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
                       t.isWinner
-                        ? 'font-bold text-w3-white'
-                        : t.isTeam
-                          ? 'font-medium text-white/85'
-                          : 'font-medium text-w3-text-muted',
+                        ? 'bg-w3-surface-muted text-w3-white'
+                        : 'text-w3-text-muted',
                     ]}
                   >
-                    {t.name}
+                    {t.score}
                   </span>
                 </div>
-                <span
-                  class:list={[
-                    'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
-                    t.isWinner
-                      ? 'bg-w3-surface-muted text-w3-white'
-                      : 'text-w3-text-muted',
-                  ]}
-                >
-                  {t.score}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
 
             <div class="mt-0.5 flex items-center justify-between gap-2 border-t border-w3-border pt-2">
               <div class="flex min-w-0 items-center gap-1.5">
-                <span class="text-[9.5px] font-semibold tracking-[0.2px] text-w3-text-muted">
+                <span class="min-w-0 truncate text-[9.5px] font-semibold tracking-[0.2px] text-w3-text-muted">
                   Tu pronóstico
                 </span>
-                <span class="truncate font-display text-[11.5px] font-bold tabular-nums text-w3-text-secondary">
+                <span class="shrink-0 font-display text-[11.5px] font-bold tabular-nums text-w3-text-secondary">
                   {thirdData.predScore ?? '—'}
                   {thirdData.advancer && (
                     <span class="ml-1 inline-flex items-center gap-0.5 align-middle">
