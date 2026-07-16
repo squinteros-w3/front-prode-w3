@@ -36,7 +36,7 @@ function stepMatches(stage: string): { match: BracketMatch; caption: string }[] 
   }));
   if (stage === 'final') {
     return base.concat(
-      thirdMatches.map((match) => ({ match, caption: '3er puesto' })),
+      thirdMatches.map((match) => ({ match, caption: '3er y 4to puesto' })),
     );
   }
   return base;

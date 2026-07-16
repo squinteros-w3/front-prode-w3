@@ -19,7 +19,7 @@ export const STAGE_SHORT: Record<string, string> = {
   r16: '8vos',
   qf: '4tos',
   sf: 'Semis',
-  third: '3er puesto',
+  third: '3er y 4to puesto',
   final: 'Final',
 };
 
