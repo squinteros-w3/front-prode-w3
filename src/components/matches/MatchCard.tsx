@@ -99,6 +99,23 @@ function PenaltyWinnerFlag({
   );
 }
 
+/** Bandera chica para la línea de penales del resultado real. */
+function PenFlag({ flagUrl, label }: { flagUrl: string | null; label: string }) {
+  if (flagUrl) {
+    return (
+      <img
+        src={flagUrl}
+        alt={label}
+        title={label}
+        className="h-[11px] w-[16px] shrink-0 rounded-[2px] object-cover ring-1 ring-white/10"
+      />
+    );
+  }
+  return (
+    <span className="h-[11px] w-[16px] shrink-0 rounded-[2px] bg-white/10" />
+  );
+}
+
 type ResultTone = 'gold' | 'exact' | 'outcome' | 'miss';
 
 const RESULT_TONE: Record<
@@ -484,6 +501,11 @@ export default function MatchCard({
   // Resultado real definido por penales (lo carga el admin en eliminación).
   const realWentToPens =
     match.homePenalties !== null && match.awayPenalties !== null;
+  // Lado que avanzó por penales (para resaltar su número en blanco).
+  const penHomeAdvanced =
+    realWentToPens && (match.homePenalties ?? 0) > (match.awayPenalties ?? 0);
+  const penAwayAdvanced =
+    realWentToPens && (match.awayPenalties ?? 0) > (match.homePenalties ?? 0);
 
   return (
     <div
@@ -603,17 +625,43 @@ export default function MatchCard({
             title="Ver quiénes acertaron"
             className="group inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full px-1.5 py-0.5 transition-colors hover:bg-w3-surface-muted"
           >
-            <span className="text-xs font-medium text-w3-text-secondary sm:text-[13px]">
+            <span className="inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-xs font-medium text-w3-text-secondary sm:text-[13px]">
               <span className="sm:hidden">
                 Real {match.homeScore}–{match.awayScore}
-                {realWentToPens &&
-                  ` (pen ${match.homePenalties}–${match.awayPenalties})`}
               </span>
               <span className="hidden sm:inline">
                 Resultado real: {match.homeScore}–{match.awayScore}
-                {realWentToPens &&
-                  ` (penales ${match.homePenalties}–${match.awayPenalties})`}
               </span>
+              {realWentToPens && (
+                <span className="inline-flex items-center gap-1 text-w3-text-muted">
+                  <span aria-hidden>·</span>
+                  <PenFlag
+                    flagUrl={match.homeTeam.flagUrl}
+                    label={match.homeTeam.name}
+                  />
+                  <span className="font-semibold tabular-nums">
+                    <span
+                      className={
+                        penHomeAdvanced ? 'text-w3-white' : 'text-w3-text-secondary'
+                      }
+                    >
+                      {match.homePenalties}
+                    </span>
+                    <span className="text-w3-text-muted">–</span>
+                    <span
+                      className={
+                        penAwayAdvanced ? 'text-w3-white' : 'text-w3-text-secondary'
+                      }
+                    >
+                      {match.awayPenalties}
+                    </span>
+                  </span>
+                  <PenFlag
+                    flagUrl={match.awayTeam.flagUrl}
+                    label={match.awayTeam.name}
+                  />
+                </span>
+              )}
             </span>
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold sm:text-xs ${

@@ -4,7 +4,6 @@ import {
   STAGE_SHORT,
   groupByStage,
   isDefined,
-  penAdvanceLine,
   pointsBadge,
   predictedAdvancer,
   predictionScore,
@@ -97,6 +96,8 @@ function td(m: BracketMatch, side: 'home' | 'away') {
     isWinner: win === side,
     score:
       m.status === 'FINISHED' && slot.score !== null ? String(slot.score) : '–',
+    // Penales entre paréntesis pegados al gol, si el cruce fue a definición.
+    penalty: wentToPens(m) && slot.penalties !== null ? String(slot.penalties) : null,
   };
 }
 
@@ -104,10 +105,8 @@ function richMeta(m: BracketMatch): string {
   const parts: string[] = [];
   if (m.kickoffAt) parts.push(formatKickoffCompact(m.kickoffAt));
   if (m.city) parts.push(m.city);
-  const pen = penAdvanceLine(m);
   let base = parts.join(' · ').toUpperCase();
   if (!base) base = m.status === 'FINISHED' ? 'FINALIZADO' : 'A DEFINIR';
-  if (wentToPens(m)) base += ` · PEN ${m.home.penalties}-${m.away.penalties}`;
   return base;
 }
 
@@ -186,10 +185,21 @@ const thirdHref = thirdData?.defined
           const badge = pointsBadge(m);
           const predScore = predictionScore(m);
           const advancer = predictedAdvancer(m);
+          // Malvinas: leyenda sobre la semifinal Argentina–Inglaterra (#102).
+          const isMalvinas = m.externalId === '102';
           return (
-            <Tag
-              href={href}
-              title={defined ? 'Cargá tu predicción' : undefined}
+            <Fragment>
+              {isMalvinas && (
+                <div
+                  class="absolute z-10 flex items-center justify-center rounded-md border border-sky-400/40 bg-sky-500/15 px-2 py-1 text-center font-display text-[10px] font-bold uppercase leading-tight tracking-wide text-sky-100"
+                  style={`left:${x - 15}px;top:${y - 46}px;width:${CARD_W + 30}px`}
+                >
+                  Las Malvinas fueron, son y serán siempre Argentinas
+                </div>
+              )}
+              <Tag
+                href={href}
+                title={defined ? 'Cargá tu predicción' : undefined}
               class:list={[
                 'absolute flex flex-col justify-between gap-1.5 overflow-hidden rounded-[10px] border border-w3-border bg-w3-surface px-3 py-2.5',
                 defined && 'transition-colors hover:border-w3-primary-border',
@@ -226,16 +236,28 @@ const thirdHref = thirdData?.defined
                         {t.name}
                       </span>
                     </div>
-                    <span
-                      class:list={[
-                        'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
-                        t.isWinner
-                          ? 'bg-w3-surface-muted text-w3-white'
-                          : 'text-w3-text-muted',
-                      ]}
-                    >
-                      {t.score}
-                    </span>
+                    <div class="flex shrink-0 items-center gap-1">
+                      <span
+                        class:list={[
+                          'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
+                          t.isWinner
+                            ? 'bg-w3-surface-muted text-w3-white'
+                            : 'text-w3-text-muted',
+                        ]}
+                      >
+                        {t.score}
+                      </span>
+                      {t.penalty !== null && (
+                        <span
+                          class:list={[
+                            'font-display text-[11px] font-bold tabular-nums',
+                            t.isWinner ? 'text-w3-white' : 'text-w3-text-muted',
+                          ]}
+                        >
+                          ({t.penalty})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -291,7 +313,8 @@ const thirdHref = thirdData?.defined
                   </span>
                 )}
               </div>
-            </Tag>
+              </Tag>
+            </Fragment>
           );
         }),
       )
@@ -303,7 +326,7 @@ const thirdHref = thirdData?.defined
           class="absolute font-display text-[11px] font-bold uppercase tracking-wide text-w3-gold"
           style={`left:${finalX + 4}px;top:${finalTop - 20}px`}
         >
-          Final · 1er puesto
+          Final
         </span>
       )
     }
@@ -315,7 +338,7 @@ const thirdHref = thirdData?.defined
             class="absolute font-display text-[11px] font-bold uppercase tracking-wide text-w3-bronze"
             style={`left:${finalX + 4}px;top:${thirdTop - 20}px`}
           >
-            3er puesto
+            3er y 4to puesto
           </span>
           <ThirdTag
             href={thirdHref}
@@ -357,16 +380,28 @@ const thirdHref = thirdData?.defined
                       {t.name}
                     </span>
                   </div>
-                  <span
-                    class:list={[
-                      'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
-                      t.isWinner
-                        ? 'bg-w3-surface-muted text-w3-white'
-                        : 'text-w3-text-muted',
-                    ]}
-                  >
-                    {t.score}
-                  </span>
+                  <div class="flex shrink-0 items-center gap-1">
+                    <span
+                      class:list={[
+                        'grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md font-display text-[13px] font-bold tabular-nums',
+                        t.isWinner
+                          ? 'bg-w3-surface-muted text-w3-white'
+                          : 'text-w3-text-muted',
+                      ]}
+                    >
+                      {t.score}
+                    </span>
+                    {t.penalty !== null && (
+                      <span
+                        class:list={[
+                          'font-display text-[11px] font-bold tabular-nums',
+                          t.isWinner ? 'text-w3-white' : 'text-w3-text-muted',
+                        ]}
+                      >
+                        ({t.penalty})
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

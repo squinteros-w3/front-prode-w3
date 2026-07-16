@@ -6,7 +6,6 @@ import {
   STAGE_SHORT,
   groupByStage,
   isDefined,
-  penAdvanceLine,
   pointsBadge,
   predictedAdvancer,
   predictionScore,
@@ -58,6 +57,9 @@ function teamData(m: BracketMatch, side: 'home' | 'away') {
     isWinner: win === side,
     score:
       m.status === 'FINISHED' && slot.score !== null ? String(slot.score) : '–',
+    // Penales entre paréntesis pegados al gol, si el cruce fue a definición.
+    penalty:
+      wentToPens(m) && slot.penalties !== null ? String(slot.penalties) : null,
   };
 }
 
@@ -155,7 +157,6 @@ const PTS_TONE: Record<string, string> = {
               const defined = isDefined(match);
               const finished = match.status === 'FINISHED';
               const pens = wentToPens(match);
-              const penLine = penAdvanceLine(match);
               const predScore = predictionScore(match);
               const advancer = predictedAdvancer(match);
               const badge = pointsBadge(match);
@@ -163,10 +164,18 @@ const PTS_TONE: Record<string, string> = {
               const href = defined
                 ? `/partidos?partido=${match.externalId}`
                 : undefined;
+              // Malvinas: leyenda sobre la semifinal Argentina–Inglaterra (#102).
+              const isMalvinas = match.externalId === '102';
               return (
-                <Tag
-                  href={href}
-                  title={defined ? 'Cargá tu predicción' : undefined}
+                <Fragment>
+                  {isMalvinas && (
+                    <div class="rounded-w3-card border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-center font-display text-[12px] font-bold uppercase tracking-wide text-sky-100">
+                      Las Malvinas fueron, son y serán siempre Argentinas
+                    </div>
+                  )}
+                  <Tag
+                    href={href}
+                    title={defined ? 'Cargá tu predicción' : undefined}
                   class:list={[
                     'flex flex-col gap-3 rounded-w3-card border border-w3-border bg-w3-surface p-3.5',
                     defined &&
@@ -246,9 +255,29 @@ const PTS_TONE: Record<string, string> = {
                       >
                         {home.score}
                       </span>
+                      {home.penalty !== null && (
+                        <span
+                          class:list={[
+                            'font-display text-[14px] font-bold tabular-nums',
+                            home.isWinner ? 'text-w3-white' : 'text-w3-text-muted',
+                          ]}
+                        >
+                          ({home.penalty})
+                        </span>
+                      )}
                       <span class="font-display text-[18px] font-bold text-w3-text-muted">
                         :
                       </span>
+                      {away.penalty !== null && (
+                        <span
+                          class:list={[
+                            'font-display text-[14px] font-bold tabular-nums',
+                            away.isWinner ? 'text-w3-white' : 'text-w3-text-muted',
+                          ]}
+                        >
+                          ({away.penalty})
+                        </span>
+                      )}
                       <span
                         class:list={[
                           'grid h-10 w-9 place-items-center rounded-[10px] border border-w3-border-strong bg-w3-score-box font-display text-[20px] font-bold tabular-nums',
@@ -283,31 +312,6 @@ const PTS_TONE: Record<string, string> = {
                       </span>
                     </div>
                   </div>
-
-                  {/* Penales (resultado real) */}
-                  {penLine && (
-                    <div class="flex items-center justify-center gap-1.5">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        class="shrink-0 text-w3-text-muted"
-                      >
-                        <path d="M12 13V2l8 4-8 4" />
-                        <path d="M20.561 10.222a9 9 0 1 1-12.55-5.29" />
-                        <path d="M8.002 9.997a5 5 0 1 0 8.9 2.02" />
-                      </svg>
-                      <span class="text-[12.5px] font-semibold text-w3-text-secondary">
-                        {penLine}
-                      </span>
-                    </div>
-                  )}
 
                   {/* Pronóstico */}
                   {(predScore || finished) && (
@@ -372,7 +376,8 @@ const PTS_TONE: Record<string, string> = {
                       </div>
                     </Fragment>
                   )}
-                </Tag>
+                  </Tag>
+                </Fragment>
               );
             })}
           </div>
